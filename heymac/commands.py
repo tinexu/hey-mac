@@ -1,0 +1,158 @@
+"""Fast path: simple commands handled instantly without calling the AI.
+
+Anything this can't handle confidently returns None and goes to the AI instead.
+"""
+from __future__ import annotations
+
+import re
+from typing import Callable
+
+from .actions import ActionResult, Mac
+
+FILLER = re.compile(
+    r"^(?:(?:hey|hi|ok|okay|yo)\s+\w+[,.!]?\s+)?"          # "hey jarvis,"
+    r"(?:(?:can|could|would) you\s+|please\s+|(?:i want to|i wanna|go)\s+)*",
+    re.I,
+)
+TRAILING = re.compile(r"(?:\s+(?:please|for me|now|thanks|thank you))+$", re.I)
+
+# If these appear the request is more than "open <app>" → let the AI handle it.
+COMPLEX_HINTS = re.compile(r"\b(with|in|and|from|folder|file|project|the one|that|my)\b", re.I)
+
+
+def clean(text: str) -> str:
+    t = text.strip().strip("\"'").strip()
+    t = re.sub(r"[.!?]+$", "", t)
+    t = FILLER.sub("", t, count=1)
+    t = TRAILING.sub("", t)
+    return t.strip()
+
+
+def route(text: str, mac: Mac) -> Callable[[], ActionResult] | None:
+    """Return a zero-arg function that performs the command, or None."""
+    t = clean(text)
+    low = t.lower()
+
+    if re.fullmatch(r"(lock|lock (the |my )?(screen|computer|mac|laptop))", low):
+        return mac.lock_screen
+    if re.fullmatch(r"(go to sleep|sleep|put (the |my )?(computer|mac|laptop) to sleep)", low):
+        return mac.sleep
+    if re.fullmatch(r"(what time is it|what'?s the time|time|battery|what'?s my battery|how much battery.*)", low):
+        return mac.status
+
+    if re.fullmatch(r"(mute|mute (the )?(sound|volume|audio))", low):
+        return lambda: mac.set_volume(mute=True)
+    if re.fullmatch(r"unmute( (the )?(sound|volume|audio))?", low):
+        return lambda: mac.set_volume(mute=False)
+    m = re.fullmatch(r"(?:set )?(?:the )?volume (?:to )?(\d{1,3})(?: ?%| percent)?", low)
+    if m:
+        return lambda: mac.set_volume(level=int(m.group(1)))
+    if re.fullmatch(r"(turn (it|the volume) up|volume up|louder)", low):
+        return lambda: mac.set_volume(change=+15)
+    if re.fullmatch(r"(turn (it|the volume) down|volume down|quieter)", low):
+        return lambda: mac.set_volume(change=-15)
+
+    if re.fullmatch(r"(pause|pause (the )?music|stop (the )?music)", low):
+        return lambda: mac.media("pause")
+    if re.fullmatch(r"(play|resume|play (the )?music|resume (the )?music)", low):
+        return lambda: mac.media("play")
+    if re.fullmatch(r"(next|skip|next (song|track)|skip (this )?(song|track))", low):
+        return lambda: mac.media("next")
+
+    sm = sendme_route(t, mac)
+    if sm:
+        return sm
+
+    chat = chatbot_route(t, mac)
+    if chat:
+        return chat
+
+    m = re.fullmatch(r"(?:open|launch|start|pull up|bring up|switch to|go to)\s+(?:up\s+)?(.+)", t, re.I)
+    if m and not COMPLEX_HINTS.search(m.group(1)):
+        target = re.sub(r"^(the|my)\s+", "", m.group(1), flags=re.I)
+        target = re.sub(r"\s+app$", "", target, flags=re.I)
+        app = mac.resolve_app(target)
+        if app:
+            return lambda: mac.open_app(app)
+        return None
+
+    m = re.fullmatch(r"(?:quit|close|exit|kill|force quit)\s+(.+)", t, re.I)
+    if m:
+        target = re.sub(r"^(the|my|out of)\s+", "", m.group(1), flags=re.I)
+        target = re.sub(r"\s+app$", "", target, flags=re.I)
+        if not COMPLEX_HINTS.search(target):
+            return lambda: mac.quit_app(target)
+
+    m = re.fullmatch(r"hide\s+(.+)", t, re.I)
+    if m:
+        return lambda: mac.hide_app(m.group(1))
+
+    return None
+
+
+# ------------------------------------------------------------ chatbots
+from .chatbots import BOT_PATTERN  # noqa: E402
+
+# Prompts that mention one of your files need the AI (to find the file first).
+NEEDS_FILE = re.compile(
+    r"\b(my|this|that)\b.*\b(file|pdf|doc|document|notes|instructions|homework|hw\s?\d*|assignment|"
+    r"essay|resume|slides|syllabus|lab|project|code|screenshot|screen shot|image|photo|picture|download|"
+    r"downloads|spreadsheet|paper|report)s?\b", re.I)
+
+CHAT_PATTERNS = [
+    # ask claude how to reverse a list / tell chatgpt to write a haiku
+    rf"(?:ask|tell|have|go ask|message)\s+(?P<bot>{BOT_PATTERN})[,:]?\s+(?:to\s+)?(?P<q>.+)",
+    # open gemini and ask it what ...
+    rf"(?:open|go to|pull up|launch)\s+(?P<bot>{BOT_PATTERN})\s+and\s+(?:ask|tell|type|say|send|search)"
+    rf"(?:\s+it)?[,:]?\s+(?:to\s+)?(?P<q>.+)",
+    # search best ramen near me on perplexity
+    rf"(?:ask|search|look up|search for)\s+(?P<q>.+?)\s+(?:on|in|with|using)\s+(?P<bot>{BOT_PATTERN})",
+]
+
+
+def chatbot_route(t: str, mac: Mac):
+    for pat in CHAT_PATTERNS:
+        m = re.fullmatch(pat, t, re.I)
+        if m:
+            q = m.group("q").strip()
+            if NEEDS_FILE.search(q):
+                return None                      # let the AI find the file first
+            bot = m.group("bot")
+            return lambda: mac.ask_chatbot(bot, q)
+    return None
+
+
+# ------------------------------------------------------------ send to myself
+ME = r"(?:me|myself|my phone|my iphone)"
+TAB = r"(?:this|the|my)?\s*(?:page|tab|link|website|site|url|article)"
+SEND_PATTERNS = [
+    # airdrop this page to my phone / airdrop my clipboard
+    (rf"air\s?drop\s+(?P<what>{TAB}|(?:my |the )?clipboard)(?:\s+to\s+{ME})?", "airdrop"),
+    # send me this page / text myself this link / send this tab to my phone
+    (rf"(?:send|text|message|imessage)\s+{ME}\s+(?P<what>{TAB}|(?:my |the )?clipboard|what i copied)", "messages"),
+    (rf"(?:send|text)\s+(?P<what>{TAB}|(?:my |the )?clipboard|what i copied)\s+to\s+{ME}", "messages"),
+    # text me a note: buy milk / send myself a reminder to call mom
+    (rf"(?:send|text|message)\s+{ME}\s+(?:a\s+)?(?P<kind>note|message|text|reminder)?\s*(?:saying|that says|to say)?[,:]?\s*(?P<note>.+)",
+     "messages"),
+]
+
+
+def sendme_route(t: str, mac: Mac):
+    for pat, via in SEND_PATTERNS:
+        m = re.fullmatch(pat, t, re.I)
+        if not m:
+            continue
+        what = (m.groupdict().get("what") or "").lower()
+        if "clipboard" in what or "copied" in what:
+            return lambda: mac.send_to_me(clipboard=True, via=via)
+        if what:
+            return lambda: mac.send_to_me(current_tab=True, via=via)
+        note = m.group("note").strip()
+        if NEEDS_FILE.search(note) or re.search(r"\.(pdf|docx?|pptx?|png|jpe?g|txt|zip)\b", note, re.I):
+            return None                        # probably a file → the AI finds it first
+        if (m.groupdict().get("kind") or "").lower() == "reminder":
+            note = "Reminder: " + re.sub(r"^(to|that)\s+", "", note, flags=re.I)
+        else:
+            note = note[:1].upper() + note[1:]
+        return lambda: mac.send_to_me(text=note, via=via)
+    return None
