@@ -1,0 +1,9 @@
+anthropic>=0.40
+numpy
+sounddevice
+openwakeword==0.6.0
+mlx-whisper>=0.4        # Apple Silicon speech-to-text
+pyobjc-core
+pyobjc-framework-Cocoa
+pyobjc-framework-Quartz
+# Intel Macs: replace mlx-whisper with  faster-whisper

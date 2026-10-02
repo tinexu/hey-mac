@@ -1,0 +1,48 @@
+# Copy to ~/.config/heymac/config.toml (or ./config.toml) and edit.
+# Every setting is optional — defaults are shown.
+
+[assistant]
+name = "Jarvis"                 # shown in the bar
+speak_replies = false           # read replies aloud with macOS `say`
+memory_seconds = 120            # how long follow-ups ("open the second one") remember context
+
+[activation]
+wake_word = "hey_jarvis"        # built-in: hey_jarvis, alexa, hey_mycroft — or a path to your own .onnx model
+wake_threshold = 0.5            # 0–1; raise if it triggers by accident, lower if it misses you
+hotkey = "option+space"         # modifiers: cmd, option, ctrl, shift  +  a key: space, j, k, ...
+enable_wake_word = true
+
+[speech]
+# Whisper model run locally on Apple Silicon. "whisper-large-v3-turbo" is accurate + fast on M-series.
+# Use "mlx-community/whisper-small.en-mlx" on 8GB Macs.
+model = "mlx-community/whisper-large-v3-turbo"
+language = "en"
+silence_seconds = 1.0           # stop recording after this much quiet
+max_seconds = 12
+# Words Whisper should expect — helps with names it would otherwise mishear.
+vocabulary = ["Cursor", "VS Code", "iMessage", "Spotify", "Notion", "Figma", "GitHub"]
+
+[ai]
+provider = "anthropic"
+model = "claude-haiku-4-5"      # cheapest capable Claude; key comes from ANTHROPIC_API_KEY
+max_tokens = 600
+
+[files]
+# Folders where your code projects live (used for "open X in Cursor")
+project_roots = ["~/code", "~/Projects", "~/Developer", "~/Documents/GitHub", "~/dev", "~/src"]
+# Extra folders to scan if Spotlight finds nothing
+search_roots = ["~/Desktop", "~/Documents", "~/Downloads"]
+
+[aliases]
+# Spoken name  ->  real app name. Add your own.
+"chrome" = "Google Chrome"
+"messages" = "Messages"
+"imessage" = "Messages"
+"texts" = "Messages"
+"vs code" = "Visual Studio Code"
+"vscode" = "Visual Studio Code"
+"code" = "Visual Studio Code"
+"terminal" = "Terminal"
+"settings" = "System Settings"
+"mail" = "Mail"
+"music" = "Music"

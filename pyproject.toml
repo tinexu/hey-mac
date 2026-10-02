@@ -1,0 +1,22 @@
+[project]
+name = "hey-mac"
+version = "0.1.0"
+description = "A local voice assistant for macOS: Whisper + wake word + Claude Haiku"
+requires-python = ">=3.11"
+dependencies = [
+  "anthropic>=0.40", "numpy", "sounddevice", "openwakeword==0.6.0",
+  "mlx-whisper>=0.4; platform_machine == 'arm64'",
+  "faster-whisper; platform_machine != 'arm64'",
+  "pyobjc-core", "pyobjc-framework-Cocoa", "pyobjc-framework-Quartz",
+  "anthropic>=0.40", "numpy", "sounddevice", "soxr", "openwakeword==0.6.0",
+]
+
+[project.scripts]
+heymac = "heymac.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["heymac"]
