@@ -37,6 +37,9 @@ Rules:
   "ask Gemini what's in my latest screenshot"), find the file(s) first (smart_find / find_files /
   recent_files), then pass file_paths — they get ATTACHED like a normal upload. The prompt should then
   refer to "the attached file". Only use attach_as="text" if the user asks to paste the text in.
+- Apple Notes: "take a note ..." -> add_note (text = what they said, cleaned up; give a short title
+  if the note is long). "add X to my <name> list/note" -> append_note. "what's on my <name> list?" or
+  anything needing a note's contents -> read_note first, then answer from it. Never invent note text.
 - "Send/text me ...", "send this to my phone", "AirDrop ..." -> send_to_me. Notes go in text; a file of theirs
   -> find it first, then file_path; "this page/link" -> current_tab; "what I copied" -> clipboard.
   via="airdrop" only if they say AirDrop (it opens a picker they tap), otherwise "messages".
@@ -118,6 +121,18 @@ TOOLS = [
      "input_schema": {"type": "object", "properties": {
          "kind": {"type": "string", "enum": ["screenshot", "download", "image", "pdf", "document", "any"]},
          "limit": {"type": "integer", "default": 5}}, "required": ["kind"]}},
+    {"name": "add_note", "description": "Create a new note in Apple Notes.",
+     "input_schema": {"type": "object", "properties": {
+         "text": {"type": "string", "description": "The note's text; new lines become new lines in the note"},
+         "title": {"type": "string", "description": "Optional title (otherwise the first line is the title)"},
+         "folder": {"type": "string", "description": "Optional Notes folder; created if it doesn't exist"}},
+         "required": ["text"]}},
+    {"name": "append_note", "description": "Add text to the end of an existing Apple Note (found by title; created if missing).",
+     "input_schema": {"type": "object", "properties": {
+         "note": {"type": "string", "description": "The note's title or part of it, e.g. 'grocery'"},
+         "text": {"type": "string"}}, "required": ["note", "text"]}},
+    {"name": "read_note", "description": "Read the text of an Apple Note by title.",
+     "input_schema": {"type": "object", "properties": {"note": {"type": "string"}}, "required": ["note"]}},
     {"name": "send_to_me",
      "description": "Send something to the user's own phone: iMessage to themselves (default) or AirDrop.",
      "input_schema": {"type": "object", "properties": {

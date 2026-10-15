@@ -59,6 +59,10 @@ def route(text: str, mac: Mac) -> Callable[[], ActionResult] | None:
     if re.fullmatch(r"(next|skip|next (song|track)|skip (this )?(song|track))", low):
         return lambda: mac.media("next")
 
+    nt = notes_route(t, mac)
+    if nt:
+        return nt
+
     sm = sendme_route(t, mac)
     if sm:
         return sm
@@ -155,4 +159,34 @@ def sendme_route(t: str, mac: Mac):
         else:
             note = note[:1].upper() + note[1:]
         return lambda: mac.send_to_me(text=note, via=via)
+    return None
+
+
+
+# ------------------------------------------------------------ Apple Notes
+NOTE_PATTERNS = [
+    # take a note: call the dentist / make a note that the quiz moved / jot down ...
+    ("new", r"(?:take|make|write|jot down|create|start)\s+(?:a\s+|me\s+a\s+)?(?:new\s+|quick\s+)?note"
+            r"(?:\s+(?:that|saying|to say|about|in notes))?[,:]?\s+(?P<text>.+)"),
+    ("new", r"(?:note|new note)[,:]\s*(?P<text>.+)"),
+    ("new", r"(?:jot down|note down|write down)[,:]?\s+(?P<text>.+)"),
+    ("new", r"(?:write|put|save|add)\s+(?P<text>.+?)\s+(?:in|to|into)\s+(?:my\s+|the\s+)?notes(?:\s+app)?"),
+    # add eggs to my grocery list / add "read ch 4" to the cs373 note
+    ("append", r"(?:add|put|write)\s+(?P<text>.+?)\s+(?:to|on|in|onto)\s+(?:my\s+|the\s+)?"
+               r"(?P<note>[\w' -]+?)\s+(?:note|list)"),
+]
+
+
+def notes_route(t: str, mac: Mac):
+    for kind, pat in NOTE_PATTERNS:
+        m = re.fullmatch(pat, t, re.I)
+        if not m:
+            continue
+        text = m.group("text").strip().strip("\"'“”")
+        if not text:
+            return None
+        if kind == "append":
+            note = m.group("note").strip()
+            return lambda: mac.append_note(note, text[:1].upper() + text[1:])
+        return lambda: mac.add_note(text[:1].upper() + text[1:])
     return None

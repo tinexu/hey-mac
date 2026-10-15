@@ -318,6 +318,25 @@ class Mac:
         ok, msg = sendme.send_to_me(handle, text, file_path, current_tab, clipboard, via, on_main)
         return ActionResult(ok, msg)
 
+        # --------------------------------------------------------------- notes
+    def add_note(self, text: str, title: str | None = None, folder: str = "") -> ActionResult:
+        """New note in Apple Notes."""
+        from . import notes
+        ok, msg = notes.add_note(text, title=title, folder=folder)
+        return ActionResult(ok, msg)
+
+    def append_note(self, note: str, text: str) -> ActionResult:
+        """Add a line to an existing note (made if it doesn't exist yet)."""
+        from . import notes
+        ok, msg = notes.append_note(note, text)
+        return ActionResult(ok, msg)
+
+    def read_note(self, note: str) -> ActionResult:
+        """The text of a note, for questions like "what's on my grocery list?"."""
+        from . import notes
+        ok, msg = notes.read_note(note)
+        return ActionResult(ok, msg)
+
     def open_path(self, path: str, reveal: bool = False) -> ActionResult:
         p = os.path.expanduser(path)
         if not os.path.exists(p):
