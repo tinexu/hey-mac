@@ -24,6 +24,8 @@ from AppKit import (
 )
 from Foundation import NSTimer
 
+from . import palettes
+
 IDLE, LISTENING, THINKING, DONE, ERROR = range(5)
 
 SIZE = 150          # lily window (square)
@@ -93,6 +95,7 @@ class LilyView(NSView):
         self.bloom = 0.0       # 0 = closed bud, 1 = fully open
         self.phase = 0.0       # animation clock
         self.on_click = None
+        self.palette = palettes.resolve(palettes.DEFAULT)
         return self
 
     def acceptsFirstMouse_(self, event):
@@ -109,7 +112,13 @@ class LilyView(NSView):
             return
         b = self.bounds()
         cx, cy = b.size.width / 2, b.size.height / 2
-        r, g, bl = GLOW[self.state]
+        pal = self.palette
+        if self.state in (IDLE, LISTENING):
+            r, g, bl = pal["glow"]
+        elif self.state == THINKING:
+            r, g, bl = pal["think"]
+        else:
+            r, g, bl = GLOW[self.state]          # green = done, amber = error, in every palette
         pulse = 0.5 + 0.5 * math.sin(self.phase * 2.4)
 
         if self.state == LISTENING:
@@ -133,10 +142,9 @@ class LilyView(NSView):
             spin = self.phase * 40
         else:
             spin = math.sin(self.phase * 0.9) * 4
-        self._petals(cx, cy, length * 0.93, 60 + spin, spread,
-                     rgba(0.90, 0.40, 0.63), rgba(1.00, 0.84, 0.92))
-        self._petals(cx, cy, length, 0 + spin, spread,
-                     rgba(0.97, 0.52, 0.72), rgba(1.00, 0.97, 0.98))
+        (bb, bt), (fb, ft) = pal["back"], pal["front"]
+        self._petals(cx, cy, length * 0.93, 60 + spin, spread, rgba(*bb), rgba(*bt), bb)
+        self._petals(cx, cy, length, 0 + spin, spread, rgba(*fb), rgba(*ft), fb)
         self._stamens(cx, cy, length, spin, o)
 
     @objc.python_method
@@ -151,7 +159,7 @@ class LilyView(NSView):
         return p
 
     @objc.python_method
-    def _petals(self, cx, cy, length, start_deg, spread, base, tip):
+    def _petals(self, cx, cy, length, start_deg, spread, base, tip, edge_rgb):
         grad = NSGradient.alloc().initWithStartingColor_endingColor_(base, tip)
         for k in range(3):
             angle = start_deg + k * 120
@@ -163,14 +171,15 @@ class LilyView(NSView):
             t.concat()
             path = self._petal_path(length, length * 0.36)
             grad.drawInBezierPath_angle_(path, 90)
-            rgba(0.85, 0.30, 0.52, 0.35).set()
+            er, eg, eb = (max(0.0, c * 0.85) for c in edge_rgb)
+            rgba(er, eg, eb, 0.35).set()
             path.setLineWidth_(0.6)
             path.stroke()
             vein = NSBezierPath.bezierPath()                      # centre vein
             vein.moveToPoint_(NSMakePoint(0, length * 0.08))
             vein.lineToPoint_(NSMakePoint(0, length * 0.72))
             vein.setLineWidth_(0.8)
-            rgba(0.88, 0.36, 0.58, 0.45).set()
+            rgba(er, eg, eb, 0.45).set()
             vein.stroke()
             NSGraphicsContext.restoreGraphicsState()
 
@@ -187,11 +196,11 @@ class LilyView(NSView):
             line.moveToPoint_(NSMakePoint(cx, cy))
             line.lineToPoint_(NSMakePoint(x, y))
             line.setLineWidth_(1.0)
-            rgba(0.95, 0.90, 0.75, 0.9).set()
+            rgba(*self.palette["filament"], 0.9).set()
             line.stroke()
-            rgba(0.78, 0.36, 0.14).set()                          # pollen tip
+            rgba(*self.palette["stamen"]).set()                   # pollen tip
             NSBezierPath.bezierPathWithOvalInRect_(NSMakeRect(x - 2.5, y - 2.5, 5, 5)).fill()
-        rgba(0.80, 0.92, 0.55).set()                               # centre
+        rgba(*self.palette["center"]).set()                        # centre
         NSBezierPath.bezierPathWithOvalInRect_(NSMakeRect(cx - 4, cy - 4, 8, 8)).fill()
 
 
@@ -398,6 +407,11 @@ class LilyOverlay(NSObject):
         if self.typing_mode:
             self.bubble_panel.makeKeyAndOrderFront_(None)
             self.bubble_panel.makeFirstResponder_(self.field)
+
+    def setPalette_(self, spec):
+        """Recolor the lily ('coffee', 'matcha', or a JSON {petal, tip, glow})."""
+        self.lily.palette = palettes.resolve(str(spec))
+        self.lily.setNeedsDisplay_(True)
 
     def setLevel_(self, level):
         self.lily.level = 0.6 * self.lily.level + 0.4 * float(level)

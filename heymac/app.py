@@ -62,13 +62,23 @@ class Assistant:
             from .lily import LilyOverlay
             self.bar = LilyOverlay.alloc().initWithName_corner_onSubmit_onOpenItem_onTyping_onDismiss_(
                 cfg.name, cfg.ui_corner, self.on_typed, self.on_open_item, self.on_typing, self.on_dismiss)
-
+        vibes = [(f"Aesthetic: {k.replace('_', ' ').title()}", (lambda key=k: self.run_action(
+                     lambda: self.mac.apply_aesthetic(key)))) for k in cfg.presets]
+        if vibes:
+            vibes += [("Undo last aesthetic", lambda: self.run_action(self.mac.undo_aesthetic)), None]
         self.menubar = MenuBar.alloc().initWithActions_([
             (f"Talk to {cfg.name}  ({cfg.hotkey})", self.on_hotkey),
             None,
+            *vibes,
             ("Open config file", self.open_config),
             ("Quit", self.quit),
         ])
+        if hasattr(self.bar, "setPalette_"):            # lily: recolor live + remember the last palette
+            self.mac.palette_hook = lambda spec: self.main(self.bar.setPalette_, spec)
+            try:
+                self.bar.setPalette_(self.mac.aesthetics.current_lily())
+            except Exception:  # noqa: BLE001
+                log.exception("couldn't restore lily colors")
         self.mic = Microphone(cfg, on_wake=self.on_wake, on_level=self.on_level,
                               on_utterance=self.on_utterance)
 
@@ -92,10 +102,7 @@ class Assistant:
             if self.cfg.enable_wake_word and self.mic._wake_model is not None:
                 bits.append(f"say “{self.cfg.wake_word.replace('_', ' ')}”")
             bits.append(f"press {self.cfg.hotkey}" if hotkey_ok else "hotkey needs Accessibility permission")
-            
-            # tell user when it's ready
             log.info("✅ Ready — %s", " or ".join(bits))
-            
             self.main(self.menubar.setStatus_, "Ready — " + " or ".join(bits))
         threading.Thread(target=warm, daemon=True).start()
 
@@ -131,6 +138,20 @@ class Assistant:
             return
         self.main(self.bar.showThinking_, "Transcribing…")
         self.worker.submit(self._transcribe_and_handle, audio)
+
+    def run_action(self, fn) -> None:                 # main thread (menu click)
+        """Run a Mac action in the background and show its result in the lily/bar."""
+        self.bar.showListening_(False)
+        self.bar.showThinking_("")
+
+        def work():
+            try:
+                r = fn()
+                self.main(self.bar.showResult_items_ok_, r.message, list(r.items or []), r.ok)
+            except Exception as e:  # noqa: BLE001
+                log.exception("menu action failed")
+                self.main(self.bar.showResult_items_ok_, f"Something went wrong: {e}", [], False)
+        self.worker.submit(work)
 
     def on_dismiss(self) -> None:                      # main thread (lily clicked)
         self.mic.cancel_recording()

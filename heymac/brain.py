@@ -37,6 +37,10 @@ Rules:
   "ask Gemini what's in my latest screenshot"), find the file(s) first (smart_find / find_files /
   recent_files), then pass file_paths — they get ATTACHED like a normal upload. The prompt should then
   refer to "the attached file". Only use attach_as="text" if the user asks to paste the text in.
+- Aesthetics (presets of wallpaper, light/dark, music, lily colors, editor theme…): "coffee mode",
+  "change my aesthetic to matcha" -> apply_aesthetic. "undo/go back" -> undo_aesthetic. "what aesthetics do
+  I have" -> list_aesthetics. "save this as a preset called X" -> save_aesthetic (overrides only for things
+  the user explicitly said, e.g. a playlist link). If the name doesn't match, list them and ask which one.
 - Apple Notes: "take a note ..." -> add_note (text = what they said, cleaned up; give a short title
   if the note is long). "add X to my <name> list/note" -> append_note. "what's on my <name> list?" or
   anything needing a note's contents -> read_note first, then answer from it. Never invent note text.
@@ -121,6 +125,22 @@ TOOLS = [
      "input_schema": {"type": "object", "properties": {
          "kind": {"type": "string", "enum": ["screenshot", "download", "image", "pdf", "document", "any"]},
          "limit": {"type": "integer", "default": 5}}, "required": ["kind"]}},
+    {"name": "apply_aesthetic", "description": "Switch to one of the user's aesthetic presets by name.",
+     "input_schema": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}},
+    {"name": "undo_aesthetic", "description": "Put back how things were before the last aesthetic switch.",
+     "input_schema": {"type": "object", "properties": {}}},
+    {"name": "list_aesthetics", "description": "List the user's aesthetic presets.",
+     "input_schema": {"type": "object", "properties": {}}},
+    {"name": "save_aesthetic",
+     "description": "Save the current wallpaper, light/dark, editor theme, dock, accent and lily colors as a new preset.",
+     "input_schema": {"type": "object", "properties": {
+         "name": {"type": "string"},
+         "overrides": {"type": "object", "description": "Optional extra settings the user stated, e.g. "
+                       "{\"playlist\": \"https://open.spotify.com/playlist/...\", \"volume\": 30}"}},
+         "required": ["name"]}},
+    {"name": "set_appearance", "description": "Switch macOS to light or dark mode.",
+     "input_schema": {"type": "object", "properties": {"mode": {"type": "string", "enum": ["light", "dark"]}},
+                      "required": ["mode"]}},
     {"name": "add_note", "description": "Create a new note in Apple Notes.",
      "input_schema": {"type": "object", "properties": {
          "text": {"type": "string", "description": "The note's text; new lines become new lines in the note"},

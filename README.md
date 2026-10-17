@@ -86,6 +86,30 @@ python -m pytest tests          # unit tests, no Mac needed
 | open cursor with my portfolio project | new Cursor window on that folder | yes |
 | where's that pdf about taxes from last year | Spotlight + content search | yes |
 | search the web for best ramen near me | Google in the browser | yes |
+| ask Claude how to reverse a linked list | opens Claude in Chrome and sends it | no |
+| open Gemini and ask it … / search … on Perplexity | same for Gemini, ChatGPT, Perplexity | no |
+| ask ChatGPT to summarize my cs373 hw2 instructions | finds the file, sends its text along | yes |
+| text me a note: buy milk / send me this page / send me what I copied | iMessage to yourself | no |
+| send my cs373 hw2 instructions to my phone | finds the file, texts it to you | yes |
+| airdrop this page to my phone | opens the AirDrop picker | no |
+| take a note: call the dentist tomorrow | new note in Apple Notes | no |
+| add eggs to my grocery list | adds a line to that note (makes it if needed) | no |
+| what's on my grocery list? | reads the note and answers | yes |
+| send my resume to ChatGPT and ask for feedback | attaches the real file, types the prompt, sends | yes |
+| ask Gemini what's in my latest screenshot | finds your newest screenshot and attaches it | yes |
+
+## Aesthetics (presets)
+
+Say **"coffee mode"**, **"change my aesthetic to matcha"** or pick one from the menu bar, and one preset switches
+your wallpaper, light/dark mode, Spotify playlist, the lily's colors, your Cursor/VS Code theme, the Dock,
+accent color, a Focus (via an Apple Shortcut) and which apps are open, all at once. **"Undo my aesthetic"** puts
+everything back; **"save my setup as a preset called rainy day"** captures what you have now.
+
+Presets live in `~/.config/heymac/config.toml` under `[presets.<name>]`; see `config.example.toml` for every option.
+Lily palettes: `lily`, `coffee`, `matcha`, `ocean`, `sakura`, `midnight`, `sunset`, or your own three hex colors.
+
+Limits: wallpaper changes the current desktop Space on each display; accent color reaches some apps only after
+they're reopened; Spotify needs the desktop app; app icons, the menu bar and Chrome's theme can't be changed.
 
 ## Customising
 

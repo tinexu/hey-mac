@@ -1,0 +1,2 @@
+[console_scripts]
+heymac = heymac.__main__:main

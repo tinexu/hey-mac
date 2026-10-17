@@ -23,6 +23,7 @@ def main() -> None:
     ap.add_argument("--config", help="path to config.toml")
     ap.add_argument("--text", help="run one command without the UI/mic (for testing), e.g. --text 'quit chrome'")
     ap.add_argument("--debug", action="store_true")
+    ap.add_argument("--list-mics", action="store_true", help="show microphones and their sample rates")
     args = ap.parse_args()
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO,
@@ -30,6 +31,15 @@ def main() -> None:
     for noisy in ("httpx", "httpcore", "anthropic"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
     _load_env()
+
+    if args.list_mics:
+        import sounddevice as sd
+        default_in = sd.default.device[0]
+        for i, d in enumerate(sd.query_devices()):
+            if d["max_input_channels"] > 0:
+                star = "*" if i == default_in else " "
+                print(f"{star} [{i}] {d['name']}  ({int(d['default_samplerate'])} Hz)")
+        return
 
     from .config import load_config
     cfg = load_config(args.config)

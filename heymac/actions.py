@@ -96,6 +96,8 @@ def fuzzy_best(query: str, choices: list[str], cutoff: float = 0.6) -> tuple[str
 class Mac:
     def __init__(self, cfg: Config):
         self.cfg = cfg
+        self.palette_hook = None          # set by the app: recolors the lily on the UI thread
+        self._aesthetics = None
         self._apps: dict[str, str] | None = None   # app name -> .app path
         self._apps_time = 0.0
 
@@ -318,7 +320,39 @@ class Mac:
         ok, msg = sendme.send_to_me(handle, text, file_path, current_tab, clipboard, via, on_main)
         return ActionResult(ok, msg)
 
-        # --------------------------------------------------------------- notes
+    # ----------------------------------------------------------- aesthetics
+    @property
+    def aesthetics(self):
+        from .aesthetics import Aesthetics
+        if self._aesthetics is None:
+            self._aesthetics = Aesthetics(self.cfg.presets, self.cfg.config_path,
+                                          open_app=self.open_app, quit_app=self.quit_app)
+        self._aesthetics.palette_hook = self.palette_hook
+        return self._aesthetics
+
+    def apply_aesthetic(self, name: str) -> ActionResult:
+        """Switch to a preset: wallpaper, light/dark, music, lily colors, editor theme…"""
+        ok, msg = self.aesthetics.apply(name)
+        return ActionResult(ok, msg)
+
+    def undo_aesthetic(self) -> ActionResult:
+        ok, msg = self.aesthetics.undo()
+        return ActionResult(ok, msg)
+
+    def save_aesthetic(self, name: str, overrides: dict | None = None) -> ActionResult:
+        ok, msg = self.aesthetics.save(name, overrides)
+        return ActionResult(ok, msg)
+
+    def list_aesthetics(self) -> ActionResult:
+        ok, msg = self.aesthetics.describe()
+        return ActionResult(ok, msg)
+
+    def set_appearance(self, mode: str) -> ActionResult:
+        """Plain light/dark mode without a preset ("turn on dark mode")."""
+        step = self.aesthetics._appearance(mode)
+        return ActionResult(step.ok, f"{mode.title()} mode on" if step.ok else step.detail)
+
+    # --------------------------------------------------------------- notes
     def add_note(self, text: str, title: str | None = None, folder: str = "") -> ActionResult:
         """New note in Apple Notes."""
         from . import notes

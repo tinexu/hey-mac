@@ -43,7 +43,7 @@ class Config:
     max_seconds: float = 12.0
     vocabulary: list[str] = field(default_factory=list)
 
-    my_handle: str = ""
+    my_handle: str = ""              # your phone/Apple ID for "text me"
 
     ai_model: str = "claude-haiku-4-5"
     max_tokens: int = 600
@@ -52,6 +52,8 @@ class Config:
         "~/code", "~/Projects", "~/Developer", "~/Documents/GitHub", "~/dev", "~/src"])
     search_roots: list[str] = field(default_factory=lambda: ["~/Desktop", "~/Documents", "~/Downloads"])
     aliases: dict[str, str] = field(default_factory=lambda: dict(DEFAULT_ALIASES))
+    presets: dict[str, dict] = field(default_factory=dict)       # [presets.<name>] aesthetics
+    config_path: Path = field(default_factory=lambda: Path.home() / ".config" / "heymac" / "config.toml")
 
     @property
     def project_paths(self) -> list[Path]:
@@ -70,7 +72,10 @@ def load_config(path: str | None = None) -> Config:
         if p.is_file():
             with open(p, "rb") as f:
                 data = tomllib.load(f)
+            cfg.config_path = p
             break
+    if path and not data:
+        cfg.config_path = Path(path)
 
     a = data.get("assistant", {})
     act = data.get("activation", {})
@@ -81,11 +86,9 @@ def load_config(path: str | None = None) -> Config:
     cfg.name = a.get("name", cfg.name)
     cfg.speak_replies = a.get("speak_replies", cfg.speak_replies)
     cfg.memory_seconds = a.get("memory_seconds", cfg.memory_seconds)
-
     ui = data.get("ui", {})
     cfg.ui_style = ui.get("style", cfg.ui_style)
     cfg.ui_corner = ui.get("corner", cfg.ui_corner)
-    
     cfg.wake_word = act.get("wake_word", cfg.wake_word)
     cfg.wake_threshold = act.get("wake_threshold", cfg.wake_threshold)
     cfg.hotkey = act.get("hotkey", cfg.hotkey)
@@ -101,5 +104,6 @@ def load_config(path: str | None = None) -> Config:
     cfg.project_roots = fl.get("project_roots", cfg.project_roots)
     cfg.search_roots = fl.get("search_roots", cfg.search_roots)
     cfg.my_handle = str(data.get("send", {}).get("me", cfg.my_handle))
+    cfg.presets = {str(k): dict(v) for k, v in data.get("presets", {}).items() if isinstance(v, dict)}
     cfg.aliases.update({k.lower(): v for k, v in data.get("aliases", {}).items()})
     return cfg

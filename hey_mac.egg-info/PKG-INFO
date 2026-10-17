@@ -1,0 +1,19 @@
+Metadata-Version: 2.4
+Name: hey-mac
+Version: 0.1.0
+Summary: A local voice assistant for macOS: Whisper + wake word + Claude Haiku
+Requires-Python: >=3.11
+Requires-Dist: anthropic>=0.40
+Requires-Dist: numpy
+Requires-Dist: sounddevice
+Requires-Dist: openwakeword==0.6.0
+Requires-Dist: mlx-whisper>=0.4; platform_machine == "arm64"
+Requires-Dist: faster-whisper; platform_machine != "arm64"
+Requires-Dist: pyobjc-core
+Requires-Dist: pyobjc-framework-Cocoa
+Requires-Dist: pyobjc-framework-Quartz
+Requires-Dist: anthropic>=0.40
+Requires-Dist: numpy
+Requires-Dist: sounddevice
+Requires-Dist: soxr
+Requires-Dist: openwakeword==0.6.0

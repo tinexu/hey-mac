@@ -1,17 +1,7 @@
 .env
 config.toml
-*.key
-
-# Python
-.venv/
 __pycache__/
 *.pyc
-*.egg-info/
-.pytest_cache/
-
-# downloaded models and logs
+.venv/
 *.onnx
-*.log
-
-# macOS
 .DS_Store

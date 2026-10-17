@@ -1,6 +1,7 @@
 anthropic>=0.40
 numpy
 sounddevice
+soxr                    # resamples your mic to 16 kHz
 openwakeword==0.6.0
 mlx-whisper>=0.4        # Apple Silicon speech-to-text
 pyobjc-core

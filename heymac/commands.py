@@ -59,6 +59,10 @@ def route(text: str, mac: Mac) -> Callable[[], ActionResult] | None:
     if re.fullmatch(r"(next|skip|next (song|track)|skip (this )?(song|track))", low):
         return lambda: mac.media("next")
 
+    ae = aesthetics_route(t, mac)
+    if ae:
+        return ae
+
     nt = notes_route(t, mac)
     if nt:
         return nt
@@ -162,7 +166,6 @@ def sendme_route(t: str, mac: Mac):
     return None
 
 
-
 # ------------------------------------------------------------ Apple Notes
 NOTE_PATTERNS = [
     # take a note: call the dentist / make a note that the quiz moved / jot down ...
@@ -189,4 +192,54 @@ def notes_route(t: str, mac: Mac):
             note = m.group("note").strip()
             return lambda: mac.append_note(note, text[:1].upper() + text[1:])
         return lambda: mac.add_note(text[:1].upper() + text[1:])
+    return None
+
+
+# ------------------------------------------------------------ aesthetics
+VIBE = r"(?:aesthetic|vibe|theme|preset|mode|look|setup)"
+AESTHETIC_PATTERNS = [
+    # change my aesthetic to coffee / set the vibe to matcha
+    rf"(?:change|switch|set|turn|make)\s+(?:my\s+|the\s+)?{VIBE}\s+(?:to|into|over to)\s+(?P<name>.+)",
+    # switch to coffee mode / activate the matcha aesthetic / put on rainy day vibes
+    rf"(?:switch to|go to|activate|enable|start|put on|turn on|use|do|apply|go)\s+(?:my\s+|the\s+)?(?P<name>.+?)\s+{VIBE}s?",
+    # coffee mode / coffee aesthetic / coffee vibes / it's coffee time
+    rf"(?:it'?s\s+)?(?P<name>.+?)\s+(?:{VIBE}s?|time)",
+    # switch to coffee (only if "coffee" is one of your presets)
+    r"(?:switch|change)\s+(?:it\s+)?(?:to|into)\s+(?P<name>.+)",
+]
+UNDO_AESTHETIC = re.compile(
+    rf"(?:undo|revert|reset|go back|switch back|change back)\s+(?:to\s+)?(?:my\s+|the\s+)?(?:old\s+|previous\s+|normal\s+)?{VIBE}s?"
+    r"|(?:go\s+|switch\s+|change\s+|put\s+it\s+)?back\s+to\s+(?:normal|how it was|before|my old (?:setup|look))"
+    rf"|undo\s+(?:that\s+)?{VIBE}\s+change", re.I)
+LIST_AESTHETICS = re.compile(
+    r"(?:what|which|list|show)(?:\s+me)?(?:\s+(?:are|is))?(?:\s+my)?\s+(?:aesthetics|presets|vibes|modes)(?:\s+do\s+i\s+have)?",
+    re.I)
+SAVE_AESTHETIC = re.compile(
+    rf"save\s+(?:my\s+|this\s+|the\s+)?(?:current\s+)?(?:{VIBE}|desktop|vibes)\s+as\s+(?:a\s+|an\s+)?(?:new\s+)?"
+    rf"(?:{VIBE}\s+)?(?:called\s+|named\s+)?(?P<name>.+)", re.I)
+
+
+def aesthetics_route(t: str, mac: Mac):
+    low = t.lower().strip()
+    if UNDO_AESTHETIC.fullmatch(low):
+        return mac.undo_aesthetic
+    if LIST_AESTHETICS.fullmatch(low):
+        return mac.list_aesthetics
+    m = SAVE_AESTHETIC.fullmatch(t)
+    if m:
+        name = m.group("name")
+        return lambda: mac.save_aesthetic(name)
+    if re.fullmatch(r"(?:turn on |switch to |go |enable |use )?(dark|light)\s+mode(?: on)?", low):
+        mode = "dark" if "dark" in low else "light"
+        if not getattr(mac, "cfg", None) or mode not in getattr(mac.cfg, "presets", {}):
+            return lambda: mac.set_appearance(mode)
+    presets = getattr(getattr(mac, "cfg", None), "presets", {}) or {}
+    if not presets:
+        return None
+    for pat in AESTHETIC_PATTERNS:
+        m = re.fullmatch(pat, t, re.I)
+        if m:
+            key = mac.aesthetics.resolve(m.group("name"))
+            if key:                       # only take over when it names one of YOUR presets
+                return lambda: mac.apply_aesthetic(key)
     return None
