@@ -315,6 +315,15 @@ class MenuBar(NSObject):
         self.menu = NSMenu.alloc().init()
         self.status_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Starting…", None, "")
         self.status_item.setEnabled_(False)
+        self.set_actions(actions)
+        self.item.setMenu_(self.menu)
+        return self
+
+    @objc.python_method
+    def set_actions(self, actions):
+        """(Re)build the menu below the status line, e.g. after the config is reloaded."""
+        self.actions = actions
+        self.menu.removeAllItems()
         self.menu.addItem_(self.status_item)
         self.menu.addItem_(NSMenuItem.separatorItem())
         for i, entry in enumerate(actions):
@@ -325,8 +334,6 @@ class MenuBar(NSObject):
             mi.setTarget_(self)
             mi.setTag_(i)
             self.menu.addItem_(mi)
-        self.item.setMenu_(self.menu)
-        return self
 
     def menuClicked_(self, sender):
         self.actions[sender.tag()][1]()

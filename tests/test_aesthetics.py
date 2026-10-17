@@ -317,3 +317,30 @@ def test_real_mac_wiring(tmp_path):
     mac = Mac(cfg)
     assert mac.aesthetics.resolve("coffee") == "coffee"
     assert route("coffee mode", mac) is not None
+
+def test_undo_goes_back_to_normal_after_several_switches(env):
+    eng, s = env["eng"], env["sys"]
+    eng.presets["night"] = {"appearance": "light", "system_volume": 10}
+    eng.apply("coffee")
+    eng.apply("coffee")                 # running it twice must not make "coffee" the new normal
+    eng.apply("night")
+    eng.undo()
+    assert s.dark is False and s.wallpaper == "/Users/me/Pictures/old.jpg"
+    assert s.mac_volume == 50 and s.dock["tilesize"] == "64"
+    assert env["hooks"][-1] == "lily"
+
+
+def test_config_reload_updates_live_object(tmp_path):
+    from heymac.config import RESTART_FIELDS, load_config, update_config
+    f = tmp_path / "config.toml"
+    f.write_text('[presets.coffee]\nappearance = "dark"\n')
+    live = load_config(str(f))
+    mac = Mac(live)
+    assert list(mac.cfg.presets) == ["coffee"]
+    f.write_text('[activation]\nhotkey = "cmd+shift+j"\n[presets.coffee]\nappearance = "dark"\n'
+                 '[presets.matcha]\nlily = "matcha"\n')
+    changed = update_config(live, load_config(str(f)))
+    assert {"presets", "hotkey"} <= changed and "hotkey" in RESTART_FIELDS
+    assert mac.cfg is live and set(mac.cfg.presets) == {"coffee", "matcha"}   # same object, new values
+    mac._aesthetics = None
+    assert mac.aesthetics.resolve("matcha") == "matcha"

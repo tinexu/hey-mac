@@ -409,7 +409,19 @@ class Aesthetics:
             return False, f"No aesthetic called “{spoken}”. You have: {have}."
         preset = dict(self.presets[key])
         unknown = set(preset) - KNOWN_KEYS
-        before = self.capture(set(preset))
+        # "Undo" means back to normal: keep the state from before the FIRST aesthetic in a row,
+        # and only add things this preset touches that the earlier ones didn't.
+        st = self.state()
+        prev = st.get("undo") if st.get("active") else None
+        before = dict(prev["before"]) if prev else {}
+        fresh = self.capture(set(preset))
+        for k, v in fresh.items():
+            if k == "editor_themes":
+                merged = dict(fresh[k])
+                merged.update(before.get(k, {}))
+                before[k] = merged
+            else:
+                before.setdefault(k, v)
         self._save_state(undo={"preset": key, "time": time.time(), "before": before})
 
         steps: list[Step] = []

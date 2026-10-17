@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 import tomllib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 
 CONFIG_LOCATIONS = [
@@ -107,3 +107,23 @@ def load_config(path: str | None = None) -> Config:
     cfg.presets = {str(k): dict(v) for k, v in data.get("presets", {}).items() if isinstance(v, dict)}
     cfg.aliases.update({k.lower(): v for k, v in data.get("aliases", {}).items()})
     return cfg
+
+
+
+# Settings that are only read when the app starts (everything else applies on reload).
+RESTART_FIELDS = {"hotkey": "hotkey", "wake_word": "wake word", "enable_wake_word": "wake word on/off",
+                  "input_device": "microphone", "ui_style": "UI style"}
+
+
+def update_config(live: Config, new: Config) -> set[str]:
+    """Copy every setting from `new` into the config object the app is already using.
+
+    Updating in place (instead of swapping objects) means the mic, speech, AI and actions,
+    which all hold a reference to `live`, see the new values right away. Returns what changed.
+    """
+    changed = set()
+    for f in fields(Config):
+        if getattr(live, f.name) != getattr(new, f.name):
+            setattr(live, f.name, getattr(new, f.name))
+            changed.add(f.name)
+    return changed

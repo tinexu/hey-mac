@@ -12,7 +12,7 @@ from pathlib import Path
 from .actions import Mac
 from .brain import Brain, Reply
 from .commands import clean, route
-from .config import Config
+from .config import RESTART_FIELDS, Config, load_config, update_config
 
 log = logging.getLogger(__name__)
 
@@ -62,17 +62,7 @@ class Assistant:
             from .lily import LilyOverlay
             self.bar = LilyOverlay.alloc().initWithName_corner_onSubmit_onOpenItem_onTyping_onDismiss_(
                 cfg.name, cfg.ui_corner, self.on_typed, self.on_open_item, self.on_typing, self.on_dismiss)
-        vibes = [(f"Aesthetic: {k.replace('_', ' ').title()}", (lambda key=k: self.run_action(
-                     lambda: self.mac.apply_aesthetic(key)))) for k in cfg.presets]
-        if vibes:
-            vibes += [("Undo last aesthetic", lambda: self.run_action(self.mac.undo_aesthetic)), None]
-        self.menubar = MenuBar.alloc().initWithActions_([
-            (f"Talk to {cfg.name}  ({cfg.hotkey})", self.on_hotkey),
-            None,
-            *vibes,
-            ("Open config file", self.open_config),
-            ("Quit", self.quit),
-        ])
+        self.menubar = MenuBar.alloc().initWithActions_(self.menu_actions())
         if hasattr(self.bar, "setPalette_"):            # lily: recolor live + remember the last palette
             self.mac.palette_hook = lambda spec: self.main(self.bar.setPalette_, spec)
             try:
@@ -88,6 +78,7 @@ class Assistant:
         self.hotkey = Hotkey(self.cfg.hotkey, self.on_hotkey)
         hotkey_ok = self.hotkey.install()
         self.mic.start()
+        threading.Thread(target=self.watch_config, name="config-watch", daemon=True).start()
         self.menubar.setStatus_("Loading speech model… (first run downloads ~1.5 GB)")
 
         def warm():
@@ -138,6 +129,64 @@ class Assistant:
             return
         self.main(self.bar.showThinking_, "Transcribing…")
         self.worker.submit(self._transcribe_and_handle, audio)
+
+    # ------------------------------------------------------ menu + config reload
+    def menu_actions(self) -> list:
+        cfg = self.cfg
+        vibes = [(f"Aesthetic: {k.replace('_', ' ').title()}", (lambda key=k: self.run_action(
+                     lambda: self.mac.apply_aesthetic(key)))) for k in cfg.presets]
+        if vibes:
+            vibes += [("Undo last aesthetic", lambda: self.run_action(self.mac.undo_aesthetic)), None]
+        return [
+            (f"Talk to {cfg.name}  ({cfg.hotkey})", self.on_hotkey),
+            None,
+            *vibes,
+            ("Open config file", self.open_config),
+            ("Reload config", lambda: self.reload_config(auto=False)),
+            ("Quit", self.quit),
+        ]
+
+    def _config_mtime(self) -> float:
+        try:
+            return os.path.getmtime(self.cfg.config_path)
+        except OSError:
+            return 0.0
+
+    def watch_config(self) -> None:
+        """Background thread: reload a couple of seconds after config.toml is saved."""
+        import time
+        last = self._config_mtime()
+        while True:
+            time.sleep(2)
+            now = self._config_mtime()
+            if now and now != last:
+                time.sleep(0.5)                       # let the editor finish writing
+                last = self._config_mtime()
+                self.main(self.reload_config, True)
+
+    def reload_config(self, auto: bool = False) -> None:     # main thread
+        try:
+            new = load_config(str(self.cfg.config_path))
+        except Exception as e:  # noqa: BLE001  (usually a TOML typo)
+            log.warning("config not reloaded: %s", e)
+            self.menubar.setStatus_("Config has a typo, still using the old one")
+            self.bar.showListening_(False)
+            self.bar.showResult_items_ok_(f"Config not reloaded, there's a typo: {str(e)[:120]}", [], False)
+            return
+        changed = update_config(self.cfg, new)
+        self.mac._aesthetics = None                       # rebuild with the new presets
+        if "ui_corner" in changed and hasattr(self.bar, "corner"):
+            self.bar.corner = self.cfg.ui_corner
+        self.menubar.set_actions(self.menu_actions())
+        needs_restart = [RESTART_FIELDS[c] for c in changed if c in RESTART_FIELDS]
+        log.info("config reloaded (%s changed)", ", ".join(sorted(changed)) or "nothing")
+        if auto and not changed:
+            return
+        msg = "Config reloaded" if changed else "Config reloaded (no changes)"
+        if needs_restart:
+            msg += f". Restart the app for: {', '.join(needs_restart)}"
+        self.bar.showListening_(False)
+        self.bar.showResult_items_ok_(msg, [], True)
 
     def run_action(self, fn) -> None:                 # main thread (menu click)
         """Run a Mac action in the background and show its result in the lily/bar."""
