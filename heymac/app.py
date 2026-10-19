@@ -65,10 +65,12 @@ class Assistant:
         self.menubar = MenuBar.alloc().initWithActions_(self.menu_actions())
         if hasattr(self.bar, "setPalette_"):            # lily: recolor live + remember the last palette
             self.mac.palette_hook = lambda spec: self.main(self.bar.setPalette_, spec)
+            self.mac.mascot_hook = lambda name: self.main(self.bar.setMascot_, name)
             try:
                 self.bar.setPalette_(self.mac.aesthetics.current_lily())
+                self.bar.setMascot_(self.mac.aesthetics.current_mascot())
             except Exception:  # noqa: BLE001
-                log.exception("couldn't restore lily colors")
+                log.exception("couldn't restore lily colors / mascot")
         self.mic = Microphone(cfg, on_wake=self.on_wake, on_level=self.on_level,
                               on_utterance=self.on_utterance)
 
@@ -175,6 +177,8 @@ class Assistant:
             return
         changed = update_config(self.cfg, new)
         self.mac._aesthetics = None                       # rebuild with the new presets
+        if "mascot" in changed and hasattr(self.bar, "setMascot_"):
+            self.bar.setMascot_(self.mac.aesthetics.current_mascot())
         if "ui_corner" in changed and hasattr(self.bar, "corner"):
             self.bar.corner = self.cfg.ui_corner
         self.menubar.set_actions(self.menu_actions())

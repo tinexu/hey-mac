@@ -30,6 +30,7 @@ class Config:
     memory_seconds: int = 120
     ui_style: str = "lily"
     ui_corner: str = "bottom-right"
+    mascot: str = "auto"             # "auto" (animal per aesthetic), "lily", or cat/bunny/frog/bear/fox/otter/owl
 
     wake_word: str = "hey_jarvis"
     wake_threshold: float = 0.5
@@ -89,6 +90,7 @@ def load_config(path: str | None = None) -> Config:
     ui = data.get("ui", {})
     cfg.ui_style = ui.get("style", cfg.ui_style)
     cfg.ui_corner = ui.get("corner", cfg.ui_corner)
+    cfg.mascot = str(ui.get("mascot", cfg.mascot)).lower()
     cfg.wake_word = act.get("wake_word", cfg.wake_word)
     cfg.wake_threshold = act.get("wake_threshold", cfg.wake_threshold)
     cfg.hotkey = act.get("hotkey", cfg.hotkey)
@@ -107,7 +109,6 @@ def load_config(path: str | None = None) -> Config:
     cfg.presets = {str(k): dict(v) for k, v in data.get("presets", {}).items() if isinstance(v, dict)}
     cfg.aliases.update({k.lower(): v for k, v in data.get("aliases", {}).items()})
     return cfg
-
 
 
 # Settings that are only read when the app starts (everything else applies on reload).

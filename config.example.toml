@@ -9,6 +9,10 @@ memory_seconds = 120            # how long follow-ups ("open the second one") re
 [ui]
 style = "lily"                  # "lily" = glowing flower in a corner, "bar" = Spotlight-style bar you can type in
 corner = "bottom-right"         # bottom-right, bottom-left, top-right, top-left
+mascot = "auto"                 # who sits in the corner: "auto" = an animal that matches your aesthetic
+                                # (coffee=bear, matcha=frog, ocean=otter, sakura=bunny, midnight=owl,
+                                #  sunset=fox, no preset=cat), "lily" = the flower, or always one animal:
+                                # cat, bunny, frog, bear, fox, otter, owl
 
 [activation]
 wake_word = "hey_jarvis"        # built-in: hey_jarvis, alexa, hey_mycroft — or a path to your own .onnx model
@@ -67,6 +71,7 @@ search_roots = ["~/Desktop", "~/Documents", "~/Downloads"]
 #   system_volume your Mac's volume 0-100
 #   lily          lily colors: lily, coffee, matcha, ocean, sakura, midnight, sunset,
 #                 or your own: { petal = "#8B5A3C", tip = "#F5E6D3", glow = "#D4A373" }
+#   mascot        cat, bunny, frog, bear, fox, otter, owl or lily (leave out = matches the lily colors)
 #   editor_theme  Cursor + VS Code color theme (or cursor_theme / vscode_theme separately)
 #   dock          { size = 16-128, position = "left"/"bottom"/"right", autohide = true }
 #   accent        graphite, red, orange, yellow, green, blue, purple, pink, multicolor
@@ -77,6 +82,7 @@ search_roots = ["~/Desktop", "~/Documents", "~/Downloads"]
 wallpaper    = "~/Pictures/Aesthetics/coffee"
 appearance   = "dark"
 lily         = "coffee"
+mascot       = "bear"
 editor_theme = "Default Dark Modern"
 # playlist   = "https://open.spotify.com/playlist/PASTE-YOUR-PLAYLIST-ID"
 volume       = 25
@@ -86,6 +92,7 @@ message      = "Coffee mode on ☕"
 wallpaper    = "~/Pictures/Aesthetics/matcha"
 appearance   = "light"
 lily         = "matcha"
+mascot       = "frog"
 editor_theme = "Default Light Modern"
 # playlist   = "https://open.spotify.com/playlist/PASTE-YOUR-PLAYLIST-ID"
 volume       = 30

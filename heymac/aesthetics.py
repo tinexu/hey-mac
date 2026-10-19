@@ -9,7 +9,10 @@ A preset lives in config.toml and can change any of these (all optional):
   volume        = 25                                   # Spotify volume 0-100
   shuffle       = true
   system_volume = 40                                   # Mac output volume 0-100
-  lily          = "coffee"                             # lily colors: a palette name or {petal, tip, glow}
+  lily          = "coffee"                             # colors: a palette name or {petal, tip, glow}
+  mascot        = "bear"                               # cat, bunny, frog, bear, fox, otter, owl, or "lily"
+                                                       # (leave it out: coffee=bear, matcha=frog, ocean=otter,
+                                                       #  sakura=bunny, midnight=owl, sunset=fox, lily=cat)
   editor_theme  = "Gruvbox Dark Medium"                # Cursor + VS Code (or cursor_theme / vscode_theme)
   dock          = { size = 40, position = "left", autohide = true }
   accent        = "orange"                             # macOS accent color (some apps update after reopening)
@@ -37,7 +40,7 @@ from pathlib import Path
 from typing import Callable
 from urllib.parse import urlparse
 
-from . import palettes
+from . import critters, palettes
 
 IMAGE_EXT = {".jpg", ".jpeg", ".png", ".heic", ".webp", ".tiff", ".tif", ".gif", ".bmp"}
 EDITOR_SETTINGS = {
@@ -53,7 +56,7 @@ HIGHLIGHTS = {
     "green": "0.752941 0.964706 0.678431 Green", "blue": "0.698039 0.843137 1.000000 Blue",
     "purple": "0.968627 0.831373 1.000000 Purple", "pink": "1.000000 0.749020 0.823529 Pink",
 }
-KNOWN_KEYS = {"wallpaper", "appearance", "playlist", "volume", "shuffle", "system_volume", "lily", "editor_theme",
+KNOWN_KEYS = {"wallpaper", "appearance", "playlist", "volume", "shuffle", "system_volume", "lily", "mascot", "editor_theme",
               "cursor_theme", "vscode_theme", "dock", "accent", "shortcut", "open", "quit", "message"}
 FILLER = re.compile(r"\b(?:my|the|a|an|aesthetic|aesthetics|mode|vibe|vibes|preset|theme|look|setup)\b", re.I)
 
@@ -220,6 +223,8 @@ class Aesthetics:
     open_app: Callable[[str], object] | None = None
     quit_app: Callable[[str], object] | None = None
     palette_hook: Callable[[str], None] | None = None      # recolors the lily on the UI thread
+    mascot_hook: Callable[[str], None] | None = None       # swaps the animal on the UI thread
+    mascot_setting: str = "auto"                           # [ui] mascot in config.toml
     editors: dict[str, str] = field(default_factory=lambda: dict(EDITOR_SETTINGS))
 
     # ---------------------------------------------------------------- names
@@ -256,6 +261,17 @@ class Aesthetics:
     def current_lily(self) -> str:
         return self.state().get("lily", palettes.DEFAULT)
 
+    def current_mascot(self) -> str:
+        """The animal to show right now: an explicit pick, else the one that goes with the colors."""
+        st = self.state()
+        lily = str(st.get("lily", palettes.DEFAULT))
+        auto = None if lily.startswith("{") else critters.MASCOT_FOR_PALETTE.get(lily)
+        return critters.choose(self.mascot_setting, st.get("mascot"), auto)
+
+    def _push_mascot(self) -> None:
+        if self.mascot_hook:
+            self.mascot_hook(self.current_mascot())
+
     # ---------------------------------------------------------------- capture current state
     def capture(self, keys: set[str]) -> dict:
         snap: dict = {}
@@ -286,6 +302,8 @@ class Aesthetics:
             snap["highlight"] = r.stdout.strip() if r.returncode == 0 else None
         if "lily" in keys:
             snap["lily"] = self.current_lily()
+        if keys & {"lily", "mascot"}:
+            snap["mascot"] = self.state().get("mascot")        # None = "follow the colors"
         if keys & {"playlist", "volume"} and self.sys.running("Spotify"):
             r = self.sys.osa(SPOTIFY_STATE)
             if r.returncode == 0 and "|" in r.stdout:
@@ -321,6 +339,27 @@ class Aesthetics:
         if self.palette_hook:
             self.palette_hook(code)
         return Step("lily colors", True)
+
+    def _mascot(self, name) -> Step:
+        n = critters.normalize(str(name))
+        if not n:
+            return Step("mascot", False, f"pick one of: {', '.join(critters.ANIMALS)}, lily")
+        self._save_state(mascot=n)
+        return Step("mascot", True, n)
+
+    def set_mascot(self, spoken: str) -> tuple[bool, str]:
+        """'make jarvis a fox' / 'back to the lily' / 'auto'."""
+        if spoken.strip().lower() in ("auto", "default", "normal", "match", "match my aesthetic"):
+            self._save_state(mascot=None)
+            self._push_mascot()
+            return True, f"Okay, I'll match your aesthetic ({self.current_mascot()} right now)."
+        step = self._mascot(spoken)
+        if not step.ok:
+            return False, f"I can be a {', '.join(critters.ANIMALS[:-1])} or {critters.ANIMALS[-1]} (or the lily)."
+        self._push_mascot()
+        if step.detail != "lily" and self.current_mascot() == "lily":
+            return True, 'Saved, but your config has [ui] mascot = "lily". Change it to "auto" to see animals.'
+        return True, "Back to the lily." if step.detail == "lily" else f"Ta-da, I'm a {step.detail} now."
 
     def _editor(self, preset: dict) -> list[Step]:
         steps = []
@@ -425,8 +464,14 @@ class Aesthetics:
         self._save_state(undo={"preset": key, "time": time.time(), "before": before})
 
         steps: list[Step] = []
+        if "mascot" in preset:
+            steps.append(self._mascot(preset["mascot"]))
+        elif "lily" in preset:
+            self._save_state(mascot=None)                 # follow the preset's colors (coffee → bear)
         if "lily" in preset:
             steps.append(self._lily(preset["lily"]))
+        if "lily" in preset or "mascot" in preset:
+            self._push_mascot()
         if "appearance" in preset:
             steps.append(self._appearance(preset["appearance"]))
         if "wallpaper" in preset:
@@ -480,8 +525,12 @@ class Aesthetics:
         if "accent" in b:
             self._write_accent(b["accent"], b.get("highlight"))
             steps.append(Step("accent color", True))
+        if "mascot" in b:
+            self._save_state(mascot=b["mascot"])
         if "lily" in b:
             steps.append(self._lily(b["lily"]))
+        if "lily" in b or "mascot" in b:
+            self._push_mascot()
         if "spotify" in b and self.sys.running("Spotify"):
             r = self.sys.osa(SPOTIFY_RESTORE, str(b["spotify"]["volume"]), b["spotify"]["state"])
             steps.append(Step("music", r.returncode == 0))
@@ -520,6 +569,8 @@ class Aesthetics:
         lily = snap.get("lily")
         if lily and lily != palettes.DEFAULT:
             preset["lily"] = json.loads(lily) if lily.startswith("{") else lily
+        if snap.get("mascot"):
+            preset["mascot"] = snap["mascot"]
         preset.update({k: v for k, v in (overrides or {}).items() if k in KNOWN_KEYS and v not in (None, "")})
 
         block = f"\n[presets.{toml_key(key)}]\n" + "".join(f"{k} = {toml_str(v)}\n" for k, v in preset.items())
@@ -543,7 +594,8 @@ class Aesthetics:
         lines = []
         for k, p in self.presets.items():
             parts = [p.get("appearance"), "music" if p.get("playlist") else None,
-                     f"lily: {p['lily']}" if isinstance(p.get("lily"), str) else None]
+                     f"lily: {p['lily']}" if isinstance(p.get("lily"), str) else None,
+                     f"mascot: {p['mascot']}" if p.get("mascot") else None]
             mark = " (on now)" if k == active else ""
             lines.append(f"{display_name(k)}{mark}" + (f": {', '.join(x for x in parts if x)}" if any(parts) else ""))
         return True, "Your aesthetics: " + " · ".join(lines)

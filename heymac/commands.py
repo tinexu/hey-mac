@@ -219,8 +219,23 @@ SAVE_AESTHETIC = re.compile(
     rf"(?:{VIBE}\s+)?(?:called\s+|named\s+)?(?P<name>.+)", re.I)
 
 
+ANIMAL_WORDS = (r"(?:cat|kitty|kitten|bunny|rabbit|frog|froggy|toad|bear|teddy|fox|otter|sea otter|owl|owlet|"
+                r"lily|lilly|flower)s?")
+MASCOT = re.compile(
+    # be a fox / turn into a bunny / make jarvis an owl / change my mascot to a frog / switch back to the lily
+    rf"(?:(?:can you\s+)?(?:be|become|turn into|change into)"
+    rf"|(?:make|turn)\s+(?:yourself|you|\w+)(?:\s+into)?"
+    rf"|(?:change|switch|set)\s+(?:your|my|the)\s+(?:mascot|animal|buddy|character|avatar|critter)\s+(?:to|into)"
+    rf"|(?:(?:switch|go)\s+)?back\s+to)\s+(?:a\s+|an\s+|the\s+|my\s+)?(?:little\s+|cute\s+)?(?P<animal>{ANIMAL_WORDS})"
+    rf"(?:\s+(?:again|now|please|mode))?", re.I)
+
+
 def aesthetics_route(t: str, mac: Mac):
     low = t.lower().strip()
+    m = MASCOT.fullmatch(low)
+    if m:
+        animal = m.group("animal")
+        return lambda: mac.set_mascot(animal)
     if UNDO_AESTHETIC.fullmatch(low):
         return mac.undo_aesthetic
     if LIST_AESTHETICS.fullmatch(low):

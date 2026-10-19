@@ -97,6 +97,7 @@ class Mac:
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.palette_hook = None          # set by the app: recolors the lily on the UI thread
+        self.mascot_hook = None           # set by the app: swaps the animal on the UI thread
         self._aesthetics = None
         self._apps: dict[str, str] | None = None   # app name -> .app path
         self._apps_time = 0.0
@@ -328,6 +329,8 @@ class Mac:
             self._aesthetics = Aesthetics(self.cfg.presets, self.cfg.config_path,
                                           open_app=self.open_app, quit_app=self.quit_app)
         self._aesthetics.palette_hook = self.palette_hook
+        self._aesthetics.mascot_hook = self.mascot_hook
+        self._aesthetics.mascot_setting = getattr(self.cfg, "mascot", "auto")
         return self._aesthetics
 
     def apply_aesthetic(self, name: str) -> ActionResult:
@@ -351,6 +354,11 @@ class Mac:
         """Plain light/dark mode without a preset ("turn on dark mode")."""
         step = self.aesthetics._appearance(mode)
         return ActionResult(step.ok, f"{mode.title()} mode on" if step.ok else step.detail)
+
+    def set_mascot(self, animal: str) -> ActionResult:
+        """Turn the corner buddy into a cat, bunny, frog, bear, fox, otter, owl (or back to the lily)."""
+        ok, msg = self.aesthetics.set_mascot(animal)
+        return ActionResult(ok, msg)
 
     # --------------------------------------------------------------- notes
     def add_note(self, text: str, title: str | None = None, folder: str = "") -> ActionResult:

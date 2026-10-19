@@ -108,6 +108,15 @@ everything back; **"save my setup as a preset called rainy day"** captures what 
 Presets live in `~/.config/heymac/config.toml` under `[presets.<name>]`; see `config.example.toml` for every option.
 Lily palettes: `lily`, `coffee`, `matcha`, `ocean`, `sakura`, `midnight`, `sunset`, or your own three hex colors.
 
+### Mascots
+
+Instead of the lily, a little animal drawn in code sits in the corner: **cat, bunny, frog, bear, fox, otter or owl**.
+It blinks and breathes while idle, perks its ears and moves its mouth with your voice, tilts its head while
+thinking, does happy ^^ eyes with sparkles when it's done, and gets a sweat drop when something fails. Each
+aesthetic brings its own animal (coffee → bear, matcha → frog, ocean → otter, sakura → bunny, midnight → owl,
+sunset → fox), or set `mascot = "fox"` in a preset. Say **"be a fox"**, **"change your mascot to an owl"** or
+**"go back to the lily"** any time; `[ui] mascot` sets the default (`auto`, `lily`, or one animal).
+
 Limits: wallpaper changes the current desktop Space on each display; accent color reaches some apps only after
 they're reopened; Spotify needs the desktop app; app icons, the menu bar and Chrome's theme can't be changed.
 

@@ -41,6 +41,8 @@ Rules:
   "change my aesthetic to matcha" -> apply_aesthetic. "undo/go back" -> undo_aesthetic. "what aesthetics do
   I have" -> list_aesthetics. "save this as a preset called X" -> save_aesthetic (overrides only for things
   the user explicitly said, e.g. a playlist link). If the name doesn't match, list them and ask which one.
+- You appear as a little animal in the corner (or a lily). "be a fox", "change your mascot to an owl",
+  "go back to the lily" -> set_mascot. "match my aesthetic" -> set_mascot("auto").
 - Apple Notes: "take a note ..." -> add_note (text = what they said, cleaned up; give a short title
   if the note is long). "add X to my <name> list/note" -> append_note. "what's on my <name> list?" or
   anything needing a note's contents -> read_note first, then answer from it. Never invent note text.
@@ -138,6 +140,10 @@ TOOLS = [
          "overrides": {"type": "object", "description": "Optional extra settings the user stated, e.g. "
                        "{\"playlist\": \"https://open.spotify.com/playlist/...\", \"volume\": 30}"}},
          "required": ["name"]}},
+    {"name": "set_mascot", "description": "Change the corner buddy: cat, bunny, frog, bear, fox, otter, owl, "
+     "lily (the flower), or auto (match the current aesthetic).",
+     "input_schema": {"type": "object", "properties": {"animal": {"type": "string", "enum": [
+         "cat", "bunny", "frog", "bear", "fox", "otter", "owl", "lily", "auto"]}}, "required": ["animal"]}},
     {"name": "set_appearance", "description": "Switch macOS to light or dark mode.",
      "input_schema": {"type": "object", "properties": {"mode": {"type": "string", "enum": ["light", "dark"]}},
                       "required": ["mode"]}},

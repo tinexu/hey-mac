@@ -1,4 +1,4 @@
-"""Floating glowing lily in a corner of the screen.
+"""Floating glowing lily (or a little animal, see critters.py) in a corner of the screen.
 
 Blooms when the assistant starts listening, pulses with your voice, turns while
 thinking, then closes and disappears. Click it to dismiss. A small bubble above it
@@ -24,7 +24,7 @@ from AppKit import (
 )
 from Foundation import NSTimer
 
-from . import palettes
+from . import critters, palettes
 
 IDLE, LISTENING, THINKING, DONE, ERROR = range(5)
 
@@ -80,6 +80,65 @@ class TypingPanel(NSPanel):
         return False
 
 
+class AppKitPen:
+    """The drawing calls critters.py needs, done with AppKit (y up, degrees)."""
+
+    def save(self):
+        NSGraphicsContext.saveGraphicsState()
+
+    def restore(self):
+        NSGraphicsContext.restoreGraphicsState()
+
+    def _xf(self, fn):
+        t = NSAffineTransform.transform()
+        fn(t)
+        t.concat()
+
+    def translate(self, x, y):
+        self._xf(lambda t: t.translateXBy_yBy_(x, y))
+
+    def rotate(self, deg):
+        self._xf(lambda t: t.rotateByDegrees_(deg))
+
+    def scale(self, sx, sy):
+        self._xf(lambda t: t.scaleXBy_yBy_(sx, sy))
+
+    def _paint(self, path, fill, stroke, width, alpha, stroke_alpha):
+        if fill:
+            rgba(*fill, alpha).set()
+            path.fill()
+        if stroke:
+            rgba(*stroke, stroke_alpha).set()
+            path.setLineWidth_(width)
+            path.setLineCapStyle_(1)        # round
+            path.setLineJoinStyle_(1)
+            path.stroke()
+
+    def ellipse(self, x, y, rx, ry, fill=None, stroke=None, width=1.0, alpha=1.0, stroke_alpha=1.0):
+        path = NSBezierPath.bezierPathWithOvalInRect_(NSMakeRect(x - rx, y - ry, 2 * rx, 2 * ry))
+        self._paint(path, fill, stroke, width, alpha, stroke_alpha)
+
+    def shape(self, cmds, fill=None, stroke=None, width=1.0, alpha=1.0, stroke_alpha=1.0):
+        path = NSBezierPath.bezierPath()
+        for c in cmds:
+            if c[0] == "M":
+                path.moveToPoint_(NSMakePoint(c[1], c[2]))
+            elif c[0] == "L":
+                path.lineToPoint_(NSMakePoint(c[1], c[2]))
+            elif c[0] == "C":
+                path.curveToPoint_controlPoint1_controlPoint2_(
+                    NSMakePoint(c[5], c[6]), NSMakePoint(c[1], c[2]), NSMakePoint(c[3], c[4]))
+            else:
+                path.closePath()
+        self._paint(path, fill, stroke, width, alpha, stroke_alpha)
+
+    def glow(self, x, y, radius, color, strength):
+        r, g, b = color
+        grad = NSGradient.alloc().initWithColors_([
+            rgba(r, g, b, 0.45 + 0.5 * strength), rgba(r, g, b, 0.30 * strength + 0.1), rgba(r, g, b, 0.0)])
+        grad.drawFromCenter_radius_toCenter_radius_options_(NSMakePoint(x, y), 0, NSMakePoint(x, y), radius, 0)
+
+
 class LilyFlippedView(NSView):
     def isFlipped(self):
         return True
@@ -96,6 +155,8 @@ class LilyView(NSView):
         self.phase = 0.0       # animation clock
         self.on_click = None
         self.palette = palettes.resolve(palettes.DEFAULT)
+        self.animal = "lily"   # or cat / bunny / frog / bear / fox / otter / owl
+        self.pen = AppKitPen()
         return self
 
     def acceptsFirstMouse_(self, event):
@@ -113,6 +174,12 @@ class LilyView(NSView):
         b = self.bounds()
         cx, cy = b.size.width / 2, b.size.height / 2
         pal = self.palette
+        if self.animal in critters.ANIMALS:
+            self.pen.save()
+            self.pen.translate(cx, cy)
+            critters.draw(self.pen, self.animal, self.state, self.level, o, self.phase, pal)
+            self.pen.restore()
+            return
         if self.state in (IDLE, LISTENING):
             r, g, bl = pal["glow"]
         elif self.state == THINKING:
@@ -411,6 +478,12 @@ class LilyOverlay(NSObject):
     def setPalette_(self, spec):
         """Recolor the lily ('coffee', 'matcha', or a JSON {petal, tip, glow})."""
         self.lily.palette = palettes.resolve(str(spec))
+        self.lily.setNeedsDisplay_(True)
+
+    def setMascot_(self, name):
+        """'fox', 'owl'… or 'lily' for the flower."""
+        name = str(name)
+        self.lily.animal = name if name in critters.ANIMALS else "lily"
         self.lily.setNeedsDisplay_(True)
 
     def setLevel_(self, level):
