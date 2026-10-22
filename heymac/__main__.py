@@ -55,8 +55,12 @@ def main() -> None:
             reply = Reply(r.message, r.items, r.ok)
             print("[fast path]", end=" ")
         else:
-            reply = Brain(cfg, mac).ask(args.text)
-            print("[AI]", end=" ")
+            from .llm import LLMError, resolve_provider
+            try:
+                reply = Brain(cfg, mac).ask(args.text)
+            except LLMError as e:
+                reply = Reply(str(e), ok=False)
+            print(f"[AI: {' / '.join(resolve_provider(cfg))}]" if reply.ok else "[AI]", end=" ")
         print(reply.text)
         for i, p in enumerate(reply.items, 1):
             print(f"  {i}. {p}")

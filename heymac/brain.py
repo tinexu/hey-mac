@@ -1,4 +1,4 @@
-"""The AI part: Claude Haiku decides which Mac actions to call."""
+"""The AI part: the model you picked (Claude by default, see llm.py) decides which Mac actions to call."""
 from __future__ import annotations
 
 import json
@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 
 from .actions import ActionResult, Mac
 from .config import Config
+from .llm import ToolCall, make_llm
 
 log = logging.getLogger(__name__)
 
@@ -186,19 +187,23 @@ class Brain:
     def __init__(self, cfg: Config, mac: Mac, client=None):
         self.cfg = cfg
         self.mac = mac
-        self._client = client
+        self._client = client            # tests: a fake Anthropic client or httpx client
+        self._llm = None
+        self._llm_key = None
         self.history: list[dict] = []
         self.last_items: list[str] = []
         self._last_time = 0.0
 
     @property
-    def client(self):
-        if self._client is None:
-            import anthropic
-            if not os.environ.get("ANTHROPIC_API_KEY"):
-                raise RuntimeError("ANTHROPIC_API_KEY isn't set (put it in .env)")
-            self._client = anthropic.Anthropic()
-        return self._client
+    def llm(self):
+        """Built on first use, and rebuilt if [ai] changes in config.toml (it auto-reloads)."""
+        key = (self.cfg.ai_provider, self.cfg.ai_model, self.cfg.ai_base_url, self.cfg.ai_api_key_env,
+               self.cfg.max_tokens)
+        if self._llm is None or key != self._llm_key:
+            if self._llm is not None:
+                self.history = []        # each provider stores turns differently
+            self._llm, self._llm_key = make_llm(self.cfg, client=self._client), key
+        return self._llm
 
     def remember(self, user_text: str, reply: Reply) -> None:
         """Record a fast-path exchange so follow-ups still have context."""
@@ -226,6 +231,11 @@ class Brain:
         fn = getattr(self.mac, name, None)
         if fn is None or name not in {t["name"] for t in TOOLS}:
             return ActionResult(False, f"Unknown tool {name}")
+        if isinstance(args.get("overrides"), str):          # non-Claude models send this as a JSON string
+            try:
+                args["overrides"] = json.loads(args["overrides"] or "{}")
+            except ValueError:
+                args["overrides"] = {}
         try:
             return fn(**args)
         except Exception as e:  # noqa: BLE001
@@ -240,28 +250,24 @@ class Brain:
             user_content = f"{text}\n\n(Items currently shown to the user:\n{listing})"
         messages = self.history + [{"role": "user", "content": user_content}]
 
+        llm = self.llm
         items: list[str] = []
         final_text, any_fail = "", False
         for _ in range(self.MAX_STEPS):
-            resp = self.client.messages.create(
-                model=self.cfg.ai_model, max_tokens=self.cfg.max_tokens,
-                system=self._system(), tools=TOOLS, messages=messages,
-            )
-            messages.append({"role": "assistant", "content": resp.content})
-            final_text = " ".join(b.text for b in resp.content if b.type == "text").strip()
-            tool_uses = [b for b in resp.content if b.type == "tool_use"]
-            if resp.stop_reason != "tool_use" or not tool_uses:
+            turn = llm.create(self._system(), messages, TOOLS)
+            llm.add_turn(messages, turn)
+            final_text = turn.text
+            if not turn.calls:
                 break
-            results = []
-            for tu in tool_uses:
-                r = self.run_tool(tu.name, dict(tu.input))
-                log.info("tool %s(%s) -> %s", tu.name, json.dumps(tu.input), r.message)
+            results: list[tuple[ToolCall, str, bool]] = []
+            for call in turn.calls:
+                r = self.run_tool(call.name, dict(call.args))
+                log.info("tool %s(%s) -> %s", call.name, json.dumps(call.args), r.message)
                 any_fail = any_fail or not r.ok
-                if r.items and tu.name in ("find_files", "find_project", "smart_find", "recent_files"):
+                if r.items and call.name in ("find_files", "find_project", "smart_find", "recent_files"):
                     items = r.items
-                results.append({"type": "tool_result", "tool_use_id": tu.id,
-                                "content": r.for_ai(), "is_error": not r.ok})
-            messages.append({"role": "user", "content": results})
+                results.append((call, r.for_ai(), r.ok))
+            llm.add_results(messages, results)
         else:
             final_text = final_text or "That took too many steps — try rephrasing?"
 

@@ -37,8 +37,18 @@ vocabulary = ["Cursor", "VS Code", "iMessage", "Spotify", "Notion", "Figma", "Gi
 me = ""
 
 [ai]
+# Which AI handles the harder requests. Simple commands ("open spotify") never use it.
+#   "anthropic"  Claude (default)            key: ANTHROPIC_API_KEY in .env
+#   "openai"     OpenAI                      key: OPENAI_API_KEY
+#   "gemini"     Google Gemini               key: GEMINI_API_KEY
+#   "ollama"     runs on your Mac, free and private, no key (install from ollama.com, then
+#                `ollama pull qwen3:8b`)
+#   "openai_compatible"  LM Studio, OpenRouter, Groq…  set model + base_url (+ api_key_env)
 provider = "anthropic"
-model = "claude-haiku-4-5"      # cheapest capable Claude; key comes from ANTHROPIC_API_KEY
+model = ""                      # empty = a cheap, capable default: claude-haiku-4-5, gpt-6-luna,
+                                # gemini-3.8-flash, qwen3:8b. The model must support tool calling.
+# base_url = "http://localhost:1234/v1"   # LM Studio / Ollama on another computer / OpenRouter…
+# api_key_env = "OPENROUTER_API_KEY"      # if your key is in a differently named variable
 max_tokens = 600
 
 [files]

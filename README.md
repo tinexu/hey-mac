@@ -21,8 +21,9 @@ A voice assistant for your Mac, a bit like Siri, ChatGPT and Claude combined. Sa
   your phone.
 - **Aesthetics.** "coffee mode" switches your wallpaper, dark mode, Spotify playlist, editor theme and Dock in
   one go, and "back to normal" undoes it.
-- **Handles harder requests with Claude.** "open a new Cursor window with my portfolio folder" goes to Claude
-  Haiku, which picks from a fixed set of safe actions.
+- **Handles harder requests with the AI you choose.** "open a new Cursor window with my portfolio folder" goes to
+  Claude by default, or OpenAI, Gemini, or a free local model through Ollama. It picks from a fixed set of safe
+  actions.
 
 ## How it works
 
@@ -32,11 +33,11 @@ A voice assistant for your Mac, a bit like Siri, ChatGPT and Claude combined. Sa
                                              │
                                   Whisper (local, mlx) → text
                                              │
-                 ┌───────────────────────────┴────────────────────────┐
-     simple command? (open/quit/lock/volume/notes/…)       anything else
-          │  instant, free                                      │
-          ▼                                          Claude Haiku + tools
-     Mac actions  ◄──────────────────────────────────────────────┘
+                 ┌───────────────────────────┴───────────────────────┐
+     simple command? (open/quit/lock/volume/notes/…)             anything else
+          │  instant, free                                           │
+          ▼                                     your AI + tools (Claude, OpenAI,
+     Mac actions  ◄──────────────────────────── Gemini or Ollama on your Mac)
           │
    the mascot in the corner shows the result
 ```
@@ -49,21 +50,23 @@ notes, messages to yourself, presets, volume, media, web search…). It **can't*
 - Your **voice never leaves your Mac**. The wake word and speech recognition both run locally.
 - **Simple commands stay local** too. Nothing is sent anywhere for "open messages" or "volume 30".
 - For **AI commands**, the text of what you said, plus the results of the actions it takes (for example file names
-  from a search, a peek at a file's text, or a note's text if you ask what's on a list), is sent to Anthropic's
-  API using your own key.
+  from a search, a peek at a file's text, or a note's text if you ask what's on a list), is sent to the AI
+  provider you picked (Anthropic by default), using your own key.
+- **With Ollama, nothing leaves your Mac at all.** The AI runs locally too.
 - When you ask **ChatGPT, Gemini, Claude or Perplexity** something, that prompt and any file you attach go to
   that service in Chrome, exactly as if you'd typed it yourself.
 - There's no analytics, telemetry or account. Your settings live in `~/.config/heymac/`.
 
 ## Setup (about 5 minutes)
 
-You need an **Apple Silicon Mac** (macOS 13.5 or newer), **[Homebrew](https://brew.sh)** and an
-**[Anthropic API key](https://console.anthropic.com/)**.
+You need an **Apple Silicon Mac** (macOS 13.5 or newer), **[Homebrew](https://brew.sh)** and either an API key
+(**[Anthropic](https://console.anthropic.com/)** by default, or OpenAI or Gemini) or **[Ollama](https://ollama.com)**
+for a free, fully local AI. See [Choosing your AI](#choosing-your-ai).
 
 ```bash
 git clone https://github.com/tinexu/hey-mac.git && cd hey-mac
 ./scripts/setup.sh              # creates .venv, installs everything, downloads the wake word models
-open -e .env                    # paste your ANTHROPIC_API_KEY
+open -e .env                    # paste your API key (skip for Ollama)
 ./scripts/make_app.sh           # builds "Hey Mac.app" in ~/Applications and starts it
 ```
 
@@ -172,9 +175,38 @@ The built-in wake words are `hey_jarvis`, `alexa` and `hey_mycroft`. For a custo
 1. Open the [openWakeWord training notebook](https://github.com/dscripka/openWakeWord#training-new-models) in Google Colab. It generates synthetic voices, so you don't need to record anything, and takes about an hour.
 2. Download the `.onnx` file and set `wake_word = "/path/to/hey_mymac.onnx"`.
 
+## Choosing your AI
+
+Simple commands ("open spotify", "volume 30", "take a note…") never use an AI. For everything else, pick a
+provider in `~/.config/heymac/config.toml`:
+
+```toml
+[ai]
+provider = "ollama"        # anthropic (default) | openai | gemini | ollama | openai_compatible
+model = ""                 # empty = the default below
+```
+
+| Provider | Default model | Key in `.env` | Notes |
+|---|---|---|---|
+| `anthropic` | `claude-haiku-4-5` | `ANTHROPIC_API_KEY` | Default, most tested |
+| `openai` | `gpt-6-luna` | `OPENAI_API_KEY` | Uses the Responses API, nothing stored by OpenAI |
+| `gemini` | `gemini-3.8-flash` | `GEMINI_API_KEY` | Google has a free tier ([get a key](https://aistudio.google.com/apikey)) |
+| `ollama` | `qwen3:8b` | none | Free and private; runs on your Mac |
+| `openai_compatible` | you choose | `api_key_env` | LM Studio, OpenRouter, Groq… set `base_url` too |
+
+**Ollama:** install it from [ollama.com](https://ollama.com), run `ollama pull qwen3:8b`, set
+`provider = "ollama"`, and keep the Ollama app running. Small local models are slower and make more mistakes
+with multi-step requests (like finding a file by description) than the cloud models; a 16 GB Mac is comfortable
+with an 8B model. Any Ollama model with tool support works; pick one tagged "tools" on ollama.com.
+
+The config reloads when you save it, so you can switch providers without restarting. If something's wrong (no key,
+Ollama not running, a model that doesn't exist), the mascot tells you what to fix.
+
 ## Cost
 
-Simple commands never call the AI. An AI command costs about 2–4k tokens with Haiku 4.5 ($1/M input, $5/M output), roughly **$0.003–0.01 each**. 20 a day comes to about $2–5 a month.
+Simple commands never call the AI. An AI command uses about 2–4k tokens. With Claude Haiku 4.5 ($1/M input,
+$5/M output) that's roughly **$0.003–0.01 each**, so 20 a day comes to about $2–5 a month. Smaller models like
+`gpt-6-luna` or Gemini Flash cost less, and Ollama is free.
 
 ## Third-party models and licenses
 
@@ -186,7 +218,7 @@ hey-mac's own code is MIT-licensed. It downloads these when you set it up:
   which means non-commercial use only. They aren't included in this repo. If you build something commercial on
   hey-mac, train your own wake word (see above) or turn the wake word off and use the hotkey.
 
-hey-mac isn't affiliated with Apple, Anthropic, OpenAI, Google, Perplexity or Spotify.
+hey-mac isn't affiliated with Apple, Anthropic, OpenAI, Google, Ollama, Perplexity or Spotify.
 
 ## Uninstall
 

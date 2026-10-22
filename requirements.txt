@@ -1,4 +1,5 @@
 anthropic>=0.40
+httpx>=0.27             # OpenAI, Gemini, Ollama
 numpy
 sounddevice
 soxr                    # resamples your mic to 16 kHz

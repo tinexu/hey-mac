@@ -23,7 +23,7 @@ download_models()
 print("Wake-word models downloaded.")
 PY
 
-[[ -f .env ]] || { cp .env.example .env; echo ">>> Put your Anthropic API key in .env"; }
+[[ -f .env ]] || { cp .env.example .env; echo ">>> Put your API key in .env (Claude by default; see config.toml [ai] for OpenAI, Gemini or Ollama)"; }
 mkdir -p ~/.config/heymac
 [[ -f ~/.config/heymac/config.toml ]] || cp config.example.toml ~/.config/heymac/config.toml
 echo

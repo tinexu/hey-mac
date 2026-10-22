@@ -20,7 +20,8 @@ heymac --text "open messages"      # run one command without the mic or UI
 | File | What it does |
 |---|---|
 | `heymac/commands.py` | Instant commands matched with regex ("quit chrome"). No AI, no cost. |
-| `heymac/brain.py` | Everything else: Claude with a fixed list of tools. |
+| `heymac/brain.py` | Everything else: the AI with a fixed list of tools. |
+| `heymac/llm.py` | Adapters for Claude, OpenAI, Gemini, Ollama and OpenAI-compatible servers. |
 | `heymac/actions.py` | The `Mac` class: every action the assistant can take. |
 | `heymac/aesthetics.py` | Presets (wallpaper, dark mode, Spotify, editor theme…), undo and save. |
 | `heymac/critters.py` | The animal mascots, drawn with a small "pen" interface so they can be tested. |

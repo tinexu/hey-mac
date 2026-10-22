@@ -46,7 +46,10 @@ class Config:
 
     my_handle: str = ""              # your phone/Apple ID for "text me"
 
-    ai_model: str = "claude-haiku-4-5"
+    ai_provider: str = "anthropic"   # anthropic | openai | gemini | ollama | openai_compatible
+    ai_model: str = ""               # empty = a cheap, capable default for the provider
+    ai_base_url: str = ""            # ollama on another machine, LM Studio, OpenRouter…
+    ai_api_key_env: str = ""         # if your key is in a differently named variable
     max_tokens: int = 600
 
     project_roots: list[str] = field(default_factory=lambda: [
@@ -101,7 +104,10 @@ def load_config(path: str | None = None) -> Config:
     cfg.silence_seconds = sp.get("silence_seconds", cfg.silence_seconds)
     cfg.max_seconds = sp.get("max_seconds", cfg.max_seconds)
     cfg.vocabulary = sp.get("vocabulary", cfg.vocabulary)
-    cfg.ai_model = ai.get("model", cfg.ai_model)
+    cfg.ai_provider = str(ai.get("provider", cfg.ai_provider))
+    cfg.ai_model = str(ai.get("model", cfg.ai_model))
+    cfg.ai_base_url = str(ai.get("base_url", cfg.ai_base_url))
+    cfg.ai_api_key_env = str(ai.get("api_key_env", cfg.ai_api_key_env))
     cfg.max_tokens = ai.get("max_tokens", cfg.max_tokens)
     cfg.project_roots = fl.get("project_roots", cfg.project_roots)
     cfg.search_roots = fl.get("search_roots", cfg.search_roots)

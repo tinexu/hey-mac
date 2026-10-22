@@ -229,8 +229,12 @@ class Assistant:
         self._handle(text)
 
     def _handle(self, text: str) -> None:              # worker thread
+        from .llm import LLMError
         try:
             reply = self._decide(text)
+        except LLMError as e:                           # missing key, Ollama not running… (already friendly)
+            log.warning("AI: %s", e)
+            reply = Reply(str(e), ok=False)
         except Exception as e:  # noqa: BLE001
             log.exception("command failed")
             reply = Reply(f"Something went wrong: {e}", ok=False)

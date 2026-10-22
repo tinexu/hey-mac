@@ -11,4 +11,4 @@ Things that are in scope:
   file name, web page or note that leads to an unintended action)
 - Anything that could leak your API key, files, messages or notes
 
-Your Anthropic API key lives in `.env`, which is git-ignored. Never paste it into an issue or a log.
+Your API key (Anthropic, OpenAI or Gemini) lives in `.env`, which is git-ignored. Never paste it into an issue or a log.

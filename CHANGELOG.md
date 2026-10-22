@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Choose your AI: Claude (default), OpenAI, Gemini, Ollama (local and free) or any OpenAI-compatible server
+- Clear messages when a key is missing, Ollama isn't running or a model doesn't exist
+
 ## 0.1.0 (first public release)
 
 - Local speech recognition with Whisper large-v3-turbo, "hey jarvis" wake word and ⌥Space hotkey
