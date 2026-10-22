@@ -188,3 +188,19 @@ def test_switch_to_an_app_still_works():
     mac = PackMac(dict(PRESETS))
     route("switch to chrome", mac)()
     assert mac.called == ("open_app", "Google Chrome")
+
+
+@pytest.mark.parametrize("said", [
+    "match my aesthetic", "revert my character", "reset your character", "change your mascot back",
+    "change your character back to normal", "go back to your normal character", "undo your character",
+])
+def test_reset_character(said):
+    mac = PackMac(dict(PRESETS))
+    route(said, mac)()
+    assert mac.called == ("set_mascot", "auto")
+
+
+def test_matcha_still_works():
+    mac = PackMac(dict(PRESETS))
+    route("matcha mode", mac)()
+    assert mac.called == ("apply_aesthetic", "matcha")

@@ -241,6 +241,15 @@ def _is_preset(mac, name: str) -> bool:
     return key in presets
 
 
+# "change your character back" / "reset your mascot" / "match my aesthetic" → the animal that goes with the aesthetic
+_WHO = r"(?:your|my|the)\s+(?:mascot|character|buddy|avatar|critter|animal)"
+MASCOT_RESET = re.compile(
+    rf"(?:revert|reset|undo)\s+{_WHO}(?:\s+back)?(?:\s+to\s+(?:normal|default|auto))?"
+    rf"|(?:change|switch|set|put|turn)\s+{_WHO}\s+back(?:\s+to\s+(?:normal|default|auto|the default))?"
+    rf"|(?:go\s+)?back\s+to\s+(?:your|my|the)\s+(?:normal|old|default|usual)\s+(?:mascot|character|buddy|animal)"
+    r"|(?:(?:make|have)\s+(?:it|you|your\s+\w+)\s+)?match\s+my\s+(?:aesthetic|vibe|preset|theme|mode)s?", re.I)
+
+
 # Custom characters (folders of pictures). "change your character to mochi" always routes here (and
 # explains the options if there's no mochi); "be mochi" / "switch to mochi" only if mochi exists.
 CHARACTER = re.compile(
@@ -261,6 +270,8 @@ def _is_character(mac, name: str) -> bool:
 
 def aesthetics_route(t: str, mac: Mac):
     low = t.lower().strip()
+    if MASCOT_RESET.fullmatch(low):
+        return lambda: mac.set_mascot("auto")
     m = MASCOT.fullmatch(low)
     if m:
         animal = m.group("animal")
