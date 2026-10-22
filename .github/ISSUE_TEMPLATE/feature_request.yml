@@ -1,0 +1,15 @@
+name: Feature idea
+description: Something you'd like to be able to say
+labels: [enhancement]
+body:
+  - type: textarea
+    id: say
+    attributes:
+      label: What would you say, and what should happen?
+      placeholder: '"text mom I''m running late" should send it in Messages'
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Anything else?

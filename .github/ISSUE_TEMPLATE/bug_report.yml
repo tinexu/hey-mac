@@ -1,0 +1,31 @@
+name: Bug report
+description: Something didn't work the way you expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you said or typed, what you expected, and what it did instead.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: |
+        The last ~30 lines of `~/Library/Logs/heymac.log` (or the Terminal output with `heymac --debug`).
+        Please remove anything personal first, like file names, phone numbers or note contents.
+      render: text
+  - type: input
+    id: mac
+    attributes:
+      label: Mac and macOS version
+      placeholder: "MacBook Air M2, macOS 15.3"
+    validations:
+      required: true
+  - type: dropdown
+    id: how
+    attributes:
+      label: How do you run it?
+      options: ["Hey Mac.app", "heymac in Terminal", "heymac --text"]

@@ -1,6 +1,6 @@
 # hey-mac
 
-[![tests](https://github.com/YOUR-USERNAME/hey-mac/actions/workflows/tests.yml/badge.svg)](https://github.com/YOUR-USERNAME/hey-mac/actions/workflows/tests.yml)
+[![tests](https://github.com/tinexu/hey-mac/actions/workflows/tests.yml/badge.svg)](https://github.com/tinexu/hey-mac/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![macOS 13+ on Apple Silicon](https://img.shields.io/badge/macOS-Apple%20Silicon-lightgrey)
 
@@ -61,7 +61,7 @@ You need an **Apple Silicon Mac** (macOS 13.5 or newer), **[Homebrew](https://br
 **[Anthropic API key](https://console.anthropic.com/)**.
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/hey-mac.git && cd hey-mac
+git clone https://github.com/tinexu/hey-mac.git && cd hey-mac
 ./scripts/setup.sh              # creates .venv, installs everything, downloads the wake word models
 open -e .env                    # paste your ANTHROPIC_API_KEY
 ./scripts/make_app.sh           # builds "Hey Mac.app" in ~/Applications and starts it

@@ -508,7 +508,7 @@ class Aesthetics:
     def undo(self) -> tuple[bool, str]:
         undo = self.state().get("undo")
         if not undo:
-            return False, "Nothing to undo yet."
+            return True, "You're already on your normal look."
         b = undo.get("before", {})
         steps: list[Step] = []
         if "wallpaper" in b:

@@ -7,7 +7,7 @@ speak_replies = false           # read replies aloud with macOS `say`
 memory_seconds = 120            # how long follow-ups ("open the second one") remember context
 
 [ui]
-style = "lily"                  # "lily" = glowing flower in a corner, "bar" = Spotlight-style bar you can type in
+style = "lily"                  # "lily" = glowing mascot in a corner (see mascot below), "bar" = Spotlight-style bar
 corner = "bottom-right"         # bottom-right, bottom-left, top-right, top-left
 mascot = "auto"                 # who sits in the corner: "auto" = an animal that matches your aesthetic
                                 # (coffee=bear, matcha=frog, ocean=otter, sakura=bunny, midnight=owl,

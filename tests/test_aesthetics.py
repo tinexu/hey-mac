@@ -216,7 +216,7 @@ def test_undo_restores_previous_state(env):
     assert s.mac_volume == 50
     assert '"workbench.colorTheme": "Default Dark Modern"' in env["cursor"].read_text()
     assert env["hooks"][-1] == "lily"
-    assert eng.undo()[0] is False                                  # nothing left to undo
+    assert "already on your normal" in eng.undo()[1]              # nothing left to undo
 
 
 # ----------------------------------------------------------------- save / list
@@ -287,6 +287,12 @@ PRESETS = {"coffee": {}, "matcha": {}, "rainy_day": {}}
     ("switch to matcha", ("apply_aesthetic", "matcha")),
     ("undo my aesthetic", ("undo_aesthetic",)),
     ("go back to normal", ("undo_aesthetic",)),
+    ("normal aesthetic", ("undo_aesthetic",)),
+    ("switch to my normal aesthetic", ("undo_aesthetic",)),
+    ("change my aesthetic to normal", ("undo_aesthetic",)),
+    ("hey jarvis default mode", ("undo_aesthetic",)),
+    ("regular vibes", ("undo_aesthetic",)),
+    ("change my aesthetic back to my old one", ("undo_aesthetic",)),
     ("what aesthetics do i have", ("list_aesthetics",)),
     ("save my setup as a preset called late night", ("save_aesthetic", "late night")),
     ("turn on dark mode", ("set_appearance", "dark")),
@@ -318,6 +324,7 @@ def test_real_mac_wiring(tmp_path):
     assert mac.aesthetics.resolve("coffee") == "coffee"
     assert route("coffee mode", mac) is not None
 
+
 def test_undo_goes_back_to_normal_after_several_switches(env):
     eng, s = env["eng"], env["sys"]
     eng.presets["night"] = {"appearance": "light", "system_volume": 10}
@@ -344,3 +351,9 @@ def test_config_reload_updates_live_object(tmp_path):
     assert mac.cfg is live and set(mac.cfg.presets) == {"coffee", "matcha"}   # same object, new values
     mac._aesthetics = None
     assert mac.aesthetics.resolve("matcha") == "matcha"
+
+
+def test_a_preset_named_default_still_wins():
+    mac = RouteMac({"default": {}, "coffee": {}})
+    route("default mode", mac)()
+    assert mac.called == ("apply_aesthetic", "default")

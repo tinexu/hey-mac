@@ -1,7 +1,20 @@
+# your secrets and personal settings (never commit these)
 .env
 config.toml
+*.key
+
+# Python
+.venv/
 __pycache__/
 *.pyc
-.venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# downloaded models and logs
 *.onnx
+*.log
+
+# macOS
 .DS_Store
