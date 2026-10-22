@@ -24,6 +24,8 @@ def main() -> None:
     ap.add_argument("--text", help="run one command without the UI/mic (for testing), e.g. --text 'quit chrome'")
     ap.add_argument("--debug", action="store_true")
     ap.add_argument("--list-mics", action="store_true", help="show microphones and their sample rates")
+    ap.add_argument("--characters", action="store_true", help="list your custom characters and any problems")
+    ap.add_argument("--new-character", metavar="NAME", help="make a folder for a new custom character and open it")
     args = ap.parse_args()
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO,
@@ -39,6 +41,24 @@ def main() -> None:
             if d["max_input_channels"] > 0:
                 star = "*" if i == default_in else " "
                 print(f"{star} [{i}] {d['name']}  ({int(d['default_samplerate'])} Hz)")
+        return
+
+    if args.characters:
+        from .characters import report
+        print(report())
+        return
+
+    if args.new_character:
+        from .characters import new_pack
+        try:
+            folder = new_pack(args.new_character)
+        except ValueError as e:
+            sys.exit(str(e))
+        print(f"Made {folder}\nAdd idle.png (and optionally listening, thinking, done, error, blink, talking),")
+        print(f'then say "change your character to {args.new_character.strip()}".')
+        if sys.platform == "darwin":
+            import subprocess
+            subprocess.run(["open", str(folder)])
         return
 
     from .config import load_config

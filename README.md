@@ -103,6 +103,7 @@ pkill -f heymac; sleep 2; open ~/Applications/"Hey Mac.app"
 heymac --text "quit chrome"
 heymac --text "find my resume"
 heymac --list-mics
+heymac --characters             # your custom characters and any problems with them
 python -m pytest                # unit tests, no Mac needed
 ```
 
@@ -153,6 +154,36 @@ thinking, does happy ^^ eyes with sparkles when it's done, and gets a sweat drop
 aesthetic brings its own animal (coffee → bear, matcha → frog, ocean → otter, sakura → bunny, midnight → owl,
 sunset → fox), or set `mascot = "fox"` in a preset. Say **"be a fox"**, **"change your mascot to an owl"** or
 **"go back to the lily"** any time; `[ui] mascot` sets the default (`auto`, `lily`, or one animal).
+
+### Make your own character
+
+A character is just a folder of pictures. hey-mac adds the bobbing, tilting, glow, "…" bubble, sparkles and
+sweat drop, so any drawing, pixel art, photo of your pet or AI-generated art works.
+
+<p align="center"><img src="docs/ghost.png" alt="The example ghost character in each state" width="700"></p>
+
+```bash
+heymac --new-character "Mochi"     # makes ~/.config/heymac/characters/mochi/ and opens it in Finder
+```
+
+Put pictures in that folder, named by when they show up. Only `idle` is required; the rest fall back to it.
+
+| File | When |
+|---|---|
+| `idle.png` | most of the time (**required**) |
+| `listening.png` | while you're talking |
+| `talking.png` | swapped with listening when you're loud, like a moving mouth |
+| `thinking.png` | while the AI works |
+| `done.png` / `error.png` | when it worked / when something failed |
+| `blink.png` | flashes for a split second every few seconds |
+
+Square pictures with a transparent background look best (about 512×512 PNG; JPG, HEIC, WebP and GIF work too,
+though GIFs don't animate). `character.toml` in the folder can set a name, size, glow color, and turn the
+movement or effects off. Then say **"change your character to Mochi"**, or use `mascot = "mochi"` in `[ui]` or in
+a preset. `heymac --characters` lists your characters and explains any problems.
+
+To try the example ghost: `cp -r examples/characters/ghost ~/.config/heymac/characters/` and say
+**"change your character to ghost"**. To share a character, zip its folder.
 
 Limits: wallpaper changes the current desktop Space on each display; accent color reaches some apps only after
 they're reopened; Spotify needs the desktop app; app icons, the menu bar and Chrome's theme can't be changed.

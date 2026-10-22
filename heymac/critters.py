@@ -33,30 +33,41 @@ DONE_GLOW = (0.40, 0.90, 0.60)
 ERROR_GLOW = (1.00, 0.66, 0.25)
 
 
-def choose(ui_setting: str | None, explicit: str | None, auto: str | None) -> str:
+def choose(ui_setting: str | None, explicit: str | None, auto: str | None, packs=()) -> str:
     """Which mascot to show.
 
     ui_setting: [ui] mascot in config: "auto" (follow presets), "lily" (always the flower),
                 or an animal name (that animal unless a preset names one explicitly).
     explicit:   set by a preset's `mascot = "…"` or by "change my mascot to a fox".
     auto:       picked from the preset's lily palette (coffee → bear …).
+    packs:      names of custom characters (folders in ~/.config/heymac/characters).
     """
     s = (ui_setting or "auto").strip().lower()
+    known = set(ANIMALS) | {"lily"} | {str(p).lower() for p in packs}
     if s == "lily":
         return "lily"
-    if explicit and (explicit in ANIMALS or explicit == "lily"):
-        return explicit
-    if s in ANIMALS:
+    if explicit and explicit.lower() in known:
+        return explicit.lower()
+    if s in known:
         return s
     if auto in ANIMALS:
         return auto
     return DEFAULT_ANIMAL
 
 
-def normalize(name: str) -> str | None:
-    """'a little bunny' -> 'bunny', 'kitty' -> 'cat', 'flower' -> 'lily'."""
+def normalize(name: str, packs=None) -> str | None:
+    """'a little bunny' -> 'bunny', 'kitty' -> 'cat', 'flower' -> 'lily', 'my mochi' -> 'mochi' (a pack).
+
+    packs: {folder name: Pack} of custom characters; they win over a built-in animal of the same name.
+    """
     n = name.strip().lower()
-    n = n.removeprefix("a ").removeprefix("an ").removeprefix("the ").removeprefix("little ").strip(" .!?")
+    for prefix in ("a ", "an ", "the ", "my ", "little "):
+        n = n.removeprefix(prefix)
+    n = n.removesuffix(" character").strip(" .!?")
+    from .characters import key
+    for folder, pack in (packs or {}).items():
+        if key(n) in getattr(pack, "keys", {key(folder)}):
+            return folder
     synonyms = {"kitty": "cat", "kitten": "cat", "rabbit": "bunny", "bun": "bunny", "toad": "frog",
                 "froggy": "frog", "teddy": "bear", "foxy": "fox", "sea otter": "otter", "owlet": "owl",
                 "flower": "lily", "lilly": "lily", "lily": "lily"}
@@ -320,11 +331,17 @@ def glow_color(state, palette):
     return DONE_GLOW if state == DONE else ERROR_GLOW
 
 
-def draw(pen, animal: str, state: int, level: float, bloom: float, phase: float, palette: dict) -> None:
-    """Draw one frame. bloom 0→1 = popping in; level 0→1 = voice loudness; phase = seconds."""
+def draw(pen, animal: str, state: int, level: float, bloom: float, phase: float, palette: dict,
+         character=None) -> None:
+    """Draw one frame. bloom 0→1 = popping in; level 0→1 = voice loudness; phase = seconds.
+
+    character: a characters.Pack to draw its pictures instead of a built-in animal.
+    """
     if bloom <= 0.02:
         return
     animal = animal if animal in DRAW else DEFAULT_ANIMAL
+    if character is not None and character.glow and state in (IDLE, LISTENING):
+        palette = {**palette, "glow": character.glow}
 
     # glow, same feel as the lily
     pulse = 0.5 + 0.5 * math.sin(phase * 2.4)
@@ -336,15 +353,26 @@ def draw(pen, animal: str, state: int, level: float, bloom: float, phase: float,
     bob = math.sin(phase * 2.2) * 1.6 + (level * 3.5 if state == LISTENING else 0)
     tilt = {THINKING: math.sin(phase * 1.6) * 9, DONE: math.sin(phase * 7) * 3}.get(state, 0.0)
     perk = {LISTENING: 1.0, DONE: 1.0, THINKING: 0.8, ERROR: 0.1}.get(state, 0.65)
+    if character is not None:
+        bob = bob if character.bob else 0.0
+        tilt = tilt if character.tilt else 0.0
+        if state == LISTENING and character.bob:
+            scale *= 1 + 0.04 * level                        # pictures can't perk their ears, so they swell
 
     pen.save()
     pen.translate(0, bob - 2)
     pen.scale(scale, scale)
     pen.rotate(tilt)
-    DRAW[animal](pen, state, level, phase, perk)
+    if character is not None:
+        size = 108 * character.scale
+        pen.image(str(character.image_for(state, level, phase)), 0, 0, size, size)
+    else:
+        DRAW[animal](pen, state, level, phase, perk)
     pen.restore()
 
     # extras
+    if character is not None and not character.effects:
+        return
     if state == THINKING:
         for i in range(3):
             up = max(0.0, math.sin(phase * 5 - i * 0.7)) * 3.5

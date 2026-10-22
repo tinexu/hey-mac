@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Choose your AI: Claude (default), OpenAI, Gemini, Ollama (local and free) or any OpenAI-compatible server
+- Custom characters: a folder of pictures (idle, listening, thinking, done, error, blink, talking) becomes your
+  corner buddy, with the same animations as the built-in animals. `heymac --new-character` and `--characters`
 - Clear messages when a key is missing, Ollama isn't running or a model doesn't exist
 
 ## 0.1.0 (first public release)

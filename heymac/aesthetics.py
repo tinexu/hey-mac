@@ -40,7 +40,7 @@ from pathlib import Path
 from typing import Callable
 from urllib.parse import urlparse
 
-from . import critters, palettes
+from . import characters, critters, palettes
 
 IMAGE_EXT = {".jpg", ".jpeg", ".png", ".heic", ".webp", ".tiff", ".tif", ".gif", ".bmp"}
 EDITOR_SETTINGS = {
@@ -261,12 +261,25 @@ class Aesthetics:
     def current_lily(self) -> str:
         return self.state().get("lily", palettes.DEFAULT)
 
+    @property
+    def characters_dir(self) -> Path:
+        return self.state_dir / "characters"
+
+    def packs(self) -> dict:
+        """Custom characters: {folder name: characters.Pack}."""
+        return characters.discover(self.characters_dir)[0]
+
+    def find_character(self, spoken: str) -> str | None:
+        """'mochi' → 'mochi' if there's a custom character by that name."""
+        return critters.normalize(spoken, self.packs()) if self.packs() else None
+
     def current_mascot(self) -> str:
         """The animal to show right now: an explicit pick, else the one that goes with the colors."""
         st = self.state()
         lily = str(st.get("lily", palettes.DEFAULT))
         auto = None if lily.startswith("{") else critters.MASCOT_FOR_PALETTE.get(lily)
-        return critters.choose(self.mascot_setting, st.get("mascot"), auto)
+        setting = critters.normalize(self.mascot_setting, self.packs()) or self.mascot_setting
+        return critters.choose(setting, st.get("mascot"), auto, packs=self.packs())
 
     def _push_mascot(self) -> None:
         if self.mascot_hook:
@@ -341,9 +354,9 @@ class Aesthetics:
         return Step("lily colors", True)
 
     def _mascot(self, name) -> Step:
-        n = critters.normalize(str(name))
+        n = critters.normalize(str(name), self.packs())
         if not n:
-            return Step("mascot", False, f"pick one of: {', '.join(critters.ANIMALS)}, lily")
+            return Step("mascot", False, f"pick one of: {', '.join(self._mascot_names())}")
         self._save_state(mascot=n)
         return Step("mascot", True, n)
 
@@ -355,11 +368,20 @@ class Aesthetics:
             return True, f"Okay, I'll match your aesthetic ({self.current_mascot()} right now)."
         step = self._mascot(spoken)
         if not step.ok:
-            return False, f"I can be a {', '.join(critters.ANIMALS[:-1])} or {critters.ANIMALS[-1]} (or the lily)."
+            names = self._mascot_names()
+            return False, f"I can be: {', '.join(names)}."
         self._push_mascot()
         if step.detail != "lily" and self.current_mascot() == "lily":
             return True, 'Saved, but your config has [ui] mascot = "lily". Change it to "auto" to see animals.'
-        return True, "Back to the lily." if step.detail == "lily" else f"Ta-da, I'm a {step.detail} now."
+        if step.detail == "lily":
+            return True, "Back to the lily."
+        pack = self.packs().get(step.detail)
+        if pack:
+            return True, f"Ta-da, I'm {pack.display} now."
+        return True, f"Ta-da, I'm a {step.detail} now."
+
+    def _mascot_names(self) -> list[str]:
+        return [*critters.ANIMALS, "lily", *self.packs()]
 
     def _editor(self, preset: dict) -> list[Step]:
         steps = []

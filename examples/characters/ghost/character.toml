@@ -1,0 +1,8 @@
+# An example custom character. Copy this folder to ~/.config/heymac/characters/ and say
+# "change your character to ghost". Make your own with:  heymac --new-character "Your Name"
+name = "Boo"
+scale = 1.0
+glow = "#B9B4FF"
+bob = true
+tilt = true
+effects = true

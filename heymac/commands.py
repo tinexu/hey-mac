@@ -241,12 +241,35 @@ def _is_preset(mac, name: str) -> bool:
     return key in presets
 
 
+# Custom characters (folders of pictures). "change your character to mochi" always routes here (and
+# explains the options if there's no mochi); "be mochi" / "switch to mochi" only if mochi exists.
+CHARACTER = re.compile(
+    r"(?:(?P<explicit>(?:change|switch|set)\s+(?:your|my|the)\s+(?:mascot|character|buddy|avatar|critter)"
+    r"\s+(?:back\s+)?(?:to|into))"
+    r"|(?:can you\s+)?(?:be|become|turn into|change into|switch to|use)"
+    r"|(?:make|turn)\s+(?:yourself|you|\w+)(?:\s+into)?)"
+    r"\s+(?:a\s+|an\s+|the\s+|my\s+)?(?P<name>[\w' -]{1,40}?)(?:\s+character)?(?:\s+(?:again|now|please))?", re.I)
+
+
+def _is_character(mac, name: str) -> bool:
+    finder = getattr(getattr(mac, "aesthetics", None), "find_character", None) if hasattr(mac, "cfg") else None
+    try:
+        return bool(finder and finder(name))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def aesthetics_route(t: str, mac: Mac):
     low = t.lower().strip()
     m = MASCOT.fullmatch(low)
     if m:
         animal = m.group("animal")
         return lambda: mac.set_mascot(animal)
+    m = CHARACTER.fullmatch(low)
+    if m:
+        name = m.group("name")
+        if m.group("explicit") or _is_character(mac, name):
+            return lambda: mac.set_mascot(name)
     if UNDO_AESTHETIC.fullmatch(low):
         return mac.undo_aesthetic
     if LIST_AESTHETICS.fullmatch(low):

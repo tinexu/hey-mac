@@ -37,6 +37,9 @@ heymac --text "open messages"      # run one command without the mic or UI
 
 ## Adding a mascot
 
+Most people don't need code for this: a folder of pictures is a character (see "Make your own character" in the
+README, and `examples/characters/ghost`). To add a built-in, drawn-in-code animal instead:
+
 Write a `_yourcritter(pen, state, level, phase, perk)` function in `critters.py`, add it to `ANIMALS` and `DRAW`,
 and the tests will check it draws in every state without leaving the window. Coordinates are y-up, centered,
 about ±60 units. A quick way to preview is to render it with pycairo using the same pen methods.

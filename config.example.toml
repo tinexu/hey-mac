@@ -12,7 +12,8 @@ corner = "bottom-right"         # bottom-right, bottom-left, top-right, top-left
 mascot = "auto"                 # who sits in the corner: "auto" = an animal that matches your aesthetic
                                 # (coffee=bear, matcha=frog, ocean=otter, sakura=bunny, midnight=owl,
                                 #  sunset=fox, no preset=cat), "lily" = the flower, or always one animal:
-                                # cat, bunny, frog, bear, fox, otter, owl
+                                # cat, bunny, frog, bear, fox, otter, owl, or your own character
+                                # (a folder of pictures, see "Make your own character" in the README)
 
 [activation]
 wake_word = "hey_jarvis"        # built-in: hey_jarvis, alexa, hey_mycroft — or a path to your own .onnx model

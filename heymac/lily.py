@@ -24,7 +24,7 @@ from AppKit import (
 )
 from Foundation import NSTimer
 
-from . import critters, palettes
+from . import characters, critters, palettes
 
 IDLE, LISTENING, THINKING, DONE, ERROR = range(5)
 
@@ -132,11 +132,42 @@ class AppKitPen:
                 path.closePath()
         self._paint(path, fill, stroke, width, alpha, stroke_alpha)
 
+    def image(self, path, x, y, w, h, alpha=1.0):
+        """Draw a picture centered on (x, y), fitted inside w×h without stretching."""
+        img = _image(path)
+        if img is None:
+            return
+        size = img.size()
+        if size.width <= 0 or size.height <= 0:
+            return
+        k = min(w / size.width, h / size.height)
+        dw, dh = size.width * k, size.height * k
+        img.drawInRect_fromRect_operation_fraction_respectFlipped_hints_(
+            NSMakeRect(x - dw / 2, y - dh / 2, dw, dh), NSMakeRect(0, 0, 0, 0), 2, alpha, True, None)
+
     def glow(self, x, y, radius, color, strength):
         r, g, b = color
         grad = NSGradient.alloc().initWithColors_([
             rgba(r, g, b, 0.45 + 0.5 * strength), rgba(r, g, b, 0.30 * strength + 0.1), rgba(r, g, b, 0.0)])
         grad.drawFromCenter_radius_toCenter_radius_options_(NSMakePoint(x, y), 0, NSMakePoint(x, y), radius, 0)
+
+
+_IMAGES: dict = {}
+
+
+def _image(path):
+    """NSImage for a character picture, cached until the file changes."""
+    from AppKit import NSImage
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        return None
+    hit = _IMAGES.get(path)
+    if hit and hit[0] == mtime:
+        return hit[1]
+    img = NSImage.alloc().initWithContentsOfFile_(path)
+    _IMAGES[path] = (mtime, img)
+    return img
 
 
 class LilyFlippedView(NSView):
@@ -155,7 +186,8 @@ class LilyView(NSView):
         self.phase = 0.0       # animation clock
         self.on_click = None
         self.palette = palettes.resolve(palettes.DEFAULT)
-        self.animal = "lily"   # or cat / bunny / frog / bear / fox / otter / owl
+        self.animal = "lily"   # or cat / bunny / frog / bear / fox / otter / owl / a custom character
+        self.character = None  # characters.Pack when it's a custom character
         self.pen = AppKitPen()
         return self
 
@@ -174,10 +206,11 @@ class LilyView(NSView):
         b = self.bounds()
         cx, cy = b.size.width / 2, b.size.height / 2
         pal = self.palette
-        if self.animal in critters.ANIMALS:
+        if self.animal in critters.ANIMALS or self.character is not None:
             self.pen.save()
             self.pen.translate(cx, cy)
-            critters.draw(self.pen, self.animal, self.state, self.level, o, self.phase, pal)
+            critters.draw(self.pen, self.animal, self.state, self.level, o, self.phase, pal,
+                          character=self.character)
             self.pen.restore()
             return
         if self.state in (IDLE, LISTENING):
@@ -481,9 +514,11 @@ class LilyOverlay(NSObject):
         self.lily.setNeedsDisplay_(True)
 
     def setMascot_(self, name):
-        """'fox', 'owl'… or 'lily' for the flower."""
+        """'fox', 'owl'…, a custom character's folder name, or 'lily' for the flower."""
         name = str(name)
-        self.lily.animal = name if name in critters.ANIMALS else "lily"
+        pack = None if name in critters.ANIMALS or name == "lily" else characters.find(name)
+        self.lily.character = pack
+        self.lily.animal = name if (name in critters.ANIMALS or pack) else "lily"
         self.lily.setNeedsDisplay_(True)
 
     def setLevel_(self, level):
