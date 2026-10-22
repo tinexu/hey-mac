@@ -157,7 +157,7 @@ def best_match(query: str, notes: list[NoteRef]) -> NoteRef | None:
 
 
 def _note_query(name: str) -> str:
-    """'my grocery list' -> 'grocery'; 'the cs373 notes' -> 'cs373'."""
+    """'my grocery list' -> 'grocery'; 'the cs101 notes' -> 'cs101'."""
     q = re.sub(r"^(?:my|the|a)\s+", "", name.strip(), flags=re.I)
     q = re.sub(r"\s+(?:note|notes|list)$", "", q, flags=re.I)
     return q.strip() or name.strip()

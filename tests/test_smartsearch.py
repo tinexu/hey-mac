@@ -9,14 +9,14 @@ from heymac.smartsearch import norm, peek_file, smart_find
 
 def make_tree(root):
     files = {
-        "Documents/School/CS373/HW2/writeup.pdf": "CS 373 Homework 2 instructions. Due Friday. Submit on Gradescope.",
-        "Documents/School/CS373/HW2/hw2_solution.py": "def solve(): pass",
-        "Documents/School/CS373/HW1/writeup.pdf": "CS 373 Homework 1 instructions",
-        "Documents/School/CS373/lecture03.pdf": "lecture notes graphs",
-        "Downloads/HW_02(1).pdf": "Homework 2 CS373 instructions copy",
+        "Documents/School/CS101/HW2/writeup.pdf": "CS 101 Homework 2 instructions. Due Friday. Submit on Gradescope.",
+        "Documents/School/CS101/HW2/hw2_solution.py": "def solve(): pass",
+        "Documents/School/CS101/HW1/writeup.pdf": "CS 101 Homework 1 instructions",
+        "Documents/School/CS101/lecture03.pdf": "lecture notes graphs",
+        "Downloads/HW_02(1).pdf": "Homework 2 CS101 instructions copy",
         "Downloads/MA261_hw2.pdf": "Math 261 homework 2",
         "Documents/resume.pdf": "Christine resume",
-        "Documents/School/CS373/.DS_Store": "",
+        "Documents/School/CS101/.DS_Store": "",
     }
     for rel, text in files.items():
         p = root / rel
@@ -48,14 +48,14 @@ def fake_mdfind_for(root):
     return mdfind
 
 
-NAME_TERMS = ["hw2", "hw 2", "homework2", "homework 2", "assignment 2", "cs373 hw2"]
-FOLDER_TERMS = ["cs373", "cs 373"]
+NAME_TERMS = ["hw2", "hw 2", "homework2", "homework 2", "assignment 2", "cs101 hw2"]
+FOLDER_TERMS = ["cs101", "cs 101"]
 CONTENT_TERMS = ["homework 2", "instructions"]
 
 
 def test_norm():
     assert norm("HW_02") == "hw2"
-    assert norm("CS 373") == "cs373"
+    assert norm("CS 101") == "cs101"
     assert norm("hw10") == "hw10"      # don't eat real zeros
 
 
@@ -66,7 +66,7 @@ def test_finds_hw2_instructions(tmp_path):
     paths = [os.path.relpath(p, tmp_path) for p, _, _ in res]
     print("\n".join(f"{s:5}  {p}  {r}" for (p0, s, r), p in zip(res, paths)))
     top2 = set(paths[:2])
-    assert "Documents/School/CS373/HW2/writeup.pdf" in top2
+    assert "Documents/School/CS101/HW2/writeup.pdf" in top2
     assert "Downloads/HW_02(1).pdf" in top2
     assert "Downloads/MA261_hw2.pdf" not in paths[:3]          # other class's hw2 ranks lower
     assert "Documents/resume.pdf" not in paths
@@ -144,12 +144,12 @@ def test_ai_flow_search_peek_open(tmp_path, monkeypatch):
             if self.step == 3:
                 seen["peek"] = [r["content"] for r in last]
                 return NS(stop_reason="tool_use", content=[NS(type="tool_use", id="d", name="open_path",
-                          input={"path": "~/Documents/School/CS373/HW2/writeup.pdf"})])
-            return NS(stop_reason="end_turn", content=[NS(type="text", text="Opened writeup.pdf (CS373 HW2).")])
+                          input={"path": "~/Documents/School/CS101/HW2/writeup.pdf"})])
+            return NS(stop_reason="end_turn", content=[NS(type="text", text="Opened writeup.pdf (CS101 HW2).")])
 
     reply = Brain(cfg, mac, client=Client()).ask(
-        "find me the file that has the instructions to my cs373 hw2 and open it")
+        "find me the file that has the instructions to my cs101 hw2 and open it")
     print(seen["find"])
     assert "Homework 2 instructions" in " ".join(seen["peek"])
-    assert ["open", str(tmp_path / "Documents/School/CS373/HW2/writeup.pdf")] in calls
+    assert ["open", str(tmp_path / "Documents/School/CS101/HW2/writeup.pdf")] in calls
     assert reply.items and reply.text.startswith("Opened")

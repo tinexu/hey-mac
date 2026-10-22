@@ -22,9 +22,9 @@ DOC_EXT = {".pdf", ".docx", ".doc", ".pptx", ".txt", ".md", ".rtf", ".pages", ".
            ".ipynb", ".tex", ".odt", ".key", ".xlsx", ".csv"}
 
 
-# ------------------------------------------------------------- normalising
+# normalizing
 def norm(s: str) -> str:
-    """'HW_02' -> 'hw2', 'CS 373' -> 'cs373'."""
+    """'HW_02' -> 'hw2', 'CS 101' -> 'cs101'."""
     s = re.sub(r"[^a-z0-9]", "", s.lower())
     return re.sub(r"(?<![0-9])0+(?=[1-9])", "", s)   # drop leading zeros: hw02 -> hw2
 
@@ -87,7 +87,7 @@ def _files_under(folder: str, max_depth: int = 4, max_files: int = 400) -> list[
     return out
 
 
-# ------------------------------------------------------------- smart_find
+# smart_find
 def smart_find(name_terms: list[str], content_terms: list[str] | None = None,
                folder_terms: list[str] | None = None, file_types: list[str] | None = None,
                home: str | None = None, fallback_roots: list[str] | None = None,
@@ -110,7 +110,7 @@ def smart_find(name_terms: list[str], content_terms: list[str] | None = None,
     # 1) file names containing any variant
     for t in name_terms:
         add(mdfind(_name_query(t), home), "name")
-    # 2) folders matching (e.g. a "CS373" folder) → everything inside
+    # 2) folders matching (e.g. a "CS101" folder) → everything inside
     folders = []
     for t in folder_terms:
         folders += [f for f in mdfind(f"{_name_query(t)} && kMDItemContentType == public.folder", home) if _ok(f)]
@@ -133,7 +133,7 @@ def smart_find(name_terms: list[str], content_terms: list[str] | None = None,
                     add([p], "walk")
 
     # ------------------------------------------------------------- scoring
-    # Two questions per file: does it match WHAT (hw2) and WHICH (cs373)? Both → strong.
+    # Two questions per file: does it match WHAT (hw2) and WHICH (cs101)? Both → strong.
     now = time.time()
     scored = []
     for path, whys in candidates.items():

@@ -30,13 +30,13 @@ class FakeMac:
 
 @pytest.mark.parametrize("said,expected", [
     ("take a note: call the dentist tomorrow", ("add", "Call the dentist tomorrow")),
-    ("hey jarvis, make a note that the cs373 quiz moved to friday",
-     ("add", "The cs373 quiz moved to friday")),
+    ("hey jarvis, make a note that the cs101 quiz moved to friday",
+     ("add", "The cs101 quiz moved to friday")),
     ("jot down ideas for the club meeting", ("add", "Ideas for the club meeting")),
     ("note: buy a birthday card for jess", ("add", "Buy a birthday card for jess")),
     ("write remember to email the TA in my notes", ("add", "Remember to email the TA")),
     ("add eggs to my grocery list", ("append", "grocery", "Eggs")),
-    ("add read chapter 4 to the cs373 note", ("append", "cs373", "Read chapter 4")),
+    ("add read chapter 4 to the cs101 note", ("append", "cs101", "Read chapter 4")),
 ])
 def test_routes(said, expected):
     mac = FakeMac()
@@ -138,4 +138,4 @@ def test_permission_error_is_explained():
 
 def test_note_query_cleanup():
     assert notes._note_query("my grocery list") == "grocery"
-    assert notes._note_query("the CS373 notes") == "CS373"
+    assert notes._note_query("the CS101 notes") == "CS101"

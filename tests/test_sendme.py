@@ -39,7 +39,7 @@ def test_routes(said, expected):
 
 
 @pytest.mark.parametrize("said", [
-    "send me my cs373 hw2 instructions",       # a file → AI finds it first
+    "send me my cs101 hw2 instructions",       # a file → AI finds it first
     "text myself resume.pdf",
     "airdrop my resume to my phone",
     "text mom I'm running late",               # not to me

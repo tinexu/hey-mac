@@ -266,7 +266,7 @@ class Mac:
     def smart_find(self, name_terms: list[str], content_terms: list[str] | None = None,
                    folder_terms: list[str] | None = None, file_types: list[str] | None = None,
                    limit: int = 8) -> ActionResult:
-        """For vague requests: 'the instructions for my cs373 hw2'."""
+        """For vague requests: 'the instructions for my cs101 hw2'."""
         from . import smartsearch
         results = smartsearch.smart_find(
             name_terms, content_terms, folder_terms, file_types,

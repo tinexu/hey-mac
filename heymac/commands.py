@@ -174,7 +174,7 @@ NOTE_PATTERNS = [
     ("new", r"(?:note|new note)[,:]\s*(?P<text>.+)"),
     ("new", r"(?:jot down|note down|write down)[,:]?\s+(?P<text>.+)"),
     ("new", r"(?:write|put|save|add)\s+(?P<text>.+?)\s+(?:in|to|into)\s+(?:my\s+|the\s+)?notes(?:\s+app)?"),
-    # add eggs to my grocery list / add "read ch 4" to the cs373 note
+    # add eggs to my grocery list / add "read ch 4" to the cs101 note
     ("append", r"(?:add|put|write)\s+(?P<text>.+?)\s+(?:to|on|in|onto)\s+(?:my\s+|the\s+)?"
                r"(?P<note>[\w' -]+?)\s+(?:note|list)"),
 ]
@@ -199,7 +199,7 @@ def notes_route(t: str, mac: Mac):
 VIBE = r"(?:aesthetic|vibe|theme|preset|mode|look|setup)"
 AESTHETIC_PATTERNS = [
     # change my aesthetic to coffee / set the vibe to matcha
-    rf"(?:change|switch|set|turn|make)\s+(?:my\s+|the\s+)?{VIBE}\s+(?:to|into|over to)\s+(?P<name>.+)",
+    rf"(?:change|switch|set|turn|make)\s+(?:my\s+|the\s+)?{VIBE}\s+(?:back\s+)?(?:to|into|over to)\s+(?P<name>.+)",
     # switch to coffee mode / activate the matcha aesthetic / put on rainy day vibes
     rf"(?:switch to|go to|activate|enable|start|put on|turn on|use|do|apply|go)\s+(?:my\s+|the\s+)?(?P<name>.+?)\s+{VIBE}s?",
     # coffee mode / coffee aesthetic / coffee vibes / it's coffee time
@@ -230,6 +230,17 @@ MASCOT = re.compile(
     rf"(?:\s+(?:again|now|please|mode))?", re.I)
 
 
+NORMAL_LOOK = re.compile(r"(?:my\s+|the\s+)?(?:old\s+)?(?:normal|default|regular|usual|original|og|basic|plain|"
+                         r"old|previous|standard)(?:\s+(?:one|again))?", re.I)
+
+
+def _is_preset(mac, name: str) -> bool:
+    """Someone could really have a preset called "default", so check before treating it as undo."""
+    presets = getattr(getattr(mac, "cfg", None), "presets", {}) or {}
+    key = name.strip().lower().replace(" ", "_")
+    return key in presets
+
+
 def aesthetics_route(t: str, mac: Mac):
     low = t.lower().strip()
     m = MASCOT.fullmatch(low)
@@ -249,6 +260,10 @@ def aesthetics_route(t: str, mac: Mac):
         if not getattr(mac, "cfg", None) or mode not in getattr(mac.cfg, "presets", {}):
             return lambda: mac.set_appearance(mode)
     presets = getattr(getattr(mac, "cfg", None), "presets", {}) or {}
+    for pat in AESTHETIC_PATTERNS:          # "normal aesthetic" / "change my aesthetic to default" = undo
+        m = re.fullmatch(pat, t, re.I)
+        if m and NORMAL_LOOK.fullmatch(m.group("name").strip(" .!?")) and not _is_preset(mac, m.group("name")):
+            return mac.undo_aesthetic
     if not presets:
         return None
     for pat in AESTHETIC_PATTERNS:

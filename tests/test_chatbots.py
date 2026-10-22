@@ -26,7 +26,7 @@ class FakeMac:
     ("ask chat gpt to write a haiku about finals", "chatgpt", "write a haiku about finals"),
     ("ask cloud what's the difference between TCP and UDP", "claude", "what's the difference between TCP and UDP"),
     ("open gemini and ask it what the weather's like in Tokyo", "gemini", "what the weather's like in Tokyo"),
-    ("search best ramen near purdue on perplexity", "perplexity", "best ramen near purdue"),
+    ("search best ramen near campus on perplexity", "perplexity", "best ramen near campus"),
     ("tell ChatGPT: explain big O like I'm five", "chatgpt", "explain big O like I'm five"),
 ])
 def test_routes(said, bot, prompt):
@@ -38,7 +38,7 @@ def test_routes(said, bot, prompt):
 
 
 @pytest.mark.parametrize("said", [
-    "ask claude to summarize my cs373 hw2 instructions",     # needs file search → AI
+    "ask claude to summarize my cs101 hw2 instructions",     # needs file search → AI
     "ask chatgpt to fix the bug in this code",
     "open messages",                                           # not a chatbot at all
 ])

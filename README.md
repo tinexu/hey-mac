@@ -1,74 +1,106 @@
-# hey-mac 🎙️
+# hey-mac
 
-A voice assistant for your Mac, a bit like Siri, ChatGPT and Claude combined. It runs locally and controls your computer.
+[![tests](https://github.com/YOUR-USERNAME/hey-mac/actions/workflows/tests.yml/badge.svg)](https://github.com/YOUR-USERNAME/hey-mac/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![macOS 13+ on Apple Silicon](https://img.shields.io/badge/macOS-Apple%20Silicon-lightgrey)
 
-- **Hears you correctly.** Speech recognition runs on your Mac with Whisper large-v3-turbo, which is much more accurate than Siri. You can add names it should expect (app names, project names) to a vocabulary list.
-- **Finds files.** "find my resume" gives you a ranked list of matches using Spotlight's index plus fuzzy matching. Then say "open the second one" or click a result.
-- **Opens and quits apps.** "open messages", "quit chrome" and "lock the computer" run instantly and don't use the AI.
-- **Handles more complex requests with AI.** "open a new cursor window with my portfolio folder" goes to Claude Haiku, which picks the right actions.
-- **Stays out of the way.** It shows a Spotlight-style bar only when you call it. Start it by saying **"hey jarvis"** or pressing **⌥ Space**, or type instead of talking.
+A voice assistant for your Mac, a bit like Siri, ChatGPT and Claude combined. Say **"hey jarvis"** (or press
+**⌥ Space**, or just type) and a little animal pops up in the corner of your screen to help.
 
-```
-   ┌──────────────────────────────────────────────┐
-   │ ◉  find my tax return pdf                    │
-   │    Found 3 matches for “tax return”          │
-   │ 1  2025_Tax_Return.pdf  —  ~/Documents/Taxes │
-   │ 2  tax-return-draft.pdf —  ~/Downloads       │
-   └──────────────────────────────────────────────┘
-```
+<p align="center"><img src="docs/mascots.png" alt="The seven mascots: cat, bunny, frog, bear, fox, otter and owl" width="760"></p>
+
+- **Hears you correctly.** Speech recognition runs on your Mac with Whisper large-v3-turbo, which is much more
+  accurate than Siri. Add words it should expect (app names, project names) to a vocabulary list.
+- **Finds files, even when you forget the name.** "find the instructions for my hw2" searches by what the file
+  is about. Then say "open the second one" or click a result.
+- **Controls your Mac.** "open messages", "quit chrome", "lock the computer" and "volume 30" run instantly,
+  without the AI.
+- **Talks to the other AIs for you.** "ask ChatGPT to review my resume" opens ChatGPT in Chrome, attaches the
+  real file, types the prompt and sends it. Works with Claude, Gemini and Perplexity too.
+- **Notes and messages.** "add eggs to my grocery list" writes to Apple Notes; "text me this page" sends it to
+  your phone.
+- **Aesthetics.** "coffee mode" switches your wallpaper, dark mode, Spotify playlist, editor theme and Dock in
+  one go, and "back to normal" undoes it.
+- **Handles harder requests with Claude.** "open a new Cursor window with my portfolio folder" goes to Claude
+  Haiku, which picks from a fixed set of safe actions.
 
 ## How it works
 
 ```
  mic ─► wake word (openWakeWord, local) ─┐
- ⌥Space hotkey ──────────────────────────┴─► record until you stop talking
+ ⌥Space hotkey / typing ─────────────────┴─► record until you stop talking
                                              │
                                   Whisper (local, mlx) → text
                                              │
                  ┌───────────────────────────┴────────────────────────┐
-     simple command? (open/quit/lock/volume/…)             anything else
+     simple command? (open/quit/lock/volume/notes/…)       anything else
           │  instant, free                                      │
           ▼                                          Claude Haiku + tools
      Mac actions  ◄──────────────────────────────────────────────┘
           │
-   Spotlight-style bar shows the result
+   the mascot in the corner shows the result
 ```
 
-The AI can only use a fixed set of safe actions: open or quit apps, find and open files, open projects in an editor, lock, sleep, volume, media, and web search. It **can't** run arbitrary shell commands.
+The AI can only use a fixed list of actions (open or quit apps, find and open files, open projects in an editor,
+notes, messages to yourself, presets, volume, media, web search…). It **can't** run arbitrary shell commands.
+
+## Privacy
+
+- Your **voice never leaves your Mac**. The wake word and speech recognition both run locally.
+- **Simple commands stay local** too. Nothing is sent anywhere for "open messages" or "volume 30".
+- For **AI commands**, the text of what you said, plus the results of the actions it takes (for example file names
+  from a search, a peek at a file's text, or a note's text if you ask what's on a list), is sent to Anthropic's
+  API using your own key.
+- When you ask **ChatGPT, Gemini, Claude or Perplexity** something, that prompt and any file you attach go to
+  that service in Chrome, exactly as if you'd typed it yourself.
+- There's no analytics, telemetry or account. Your settings live in `~/.config/heymac/`.
 
 ## Setup (about 5 minutes)
 
-You need an **Apple Silicon Mac**, **Homebrew** and an **[Anthropic API key](https://console.anthropic.com/)**.
+You need an **Apple Silicon Mac** (macOS 13.5 or newer), **[Homebrew](https://brew.sh)** and an
+**[Anthropic API key](https://console.anthropic.com/)**.
 
 ```bash
-git clone <your repo> hey-mac && cd hey-mac
-./scripts/setup.sh              # creates .venv, installs everything
+git clone https://github.com/YOUR-USERNAME/hey-mac.git && cd hey-mac
+./scripts/setup.sh              # creates .venv, installs everything, downloads the wake word models
 open -e .env                    # paste your ANTHROPIC_API_KEY
-source .venv/bin/activate
-heymac
+./scripts/make_app.sh           # builds "Hey Mac.app" in ~/Applications and starts it
 ```
 
-On the first run it downloads the Whisper model (~1.5 GB). The menu bar icon (〰) shows **Ready** when it's done.
+The first start downloads the Whisper model (~1.5 GB). The menu bar icon (〰) shows **Ready** when it's done.
+Logs go to `~/Library/Logs/heymac.log`. To start it at login, add **Hey Mac** in System Settings → General →
+Login Items.
+
+Prefer Terminal? `source .venv/bin/activate && heymac` runs the same thing in the foreground.
 
 ### macOS permissions
 
-Give these to the app you launch `heymac` from (Terminal, iTerm, or Cursor's terminal):
+Give these to **Hey Mac** (or to your terminal app, if you run `heymac` from Terminal):
 
 | Permission | Why | Where |
 |---|---|---|
 | Microphone | hearing you | macOS asks automatically |
-| Accessibility | ⌥Space hotkey, lock screen | System Settings → Privacy & Security → Accessibility |
-| Automation | quitting apps | macOS asks the first time |
+| Accessibility | ⌥Space hotkey, lock screen, typing into chatbots | System Settings → Privacy & Security → Accessibility |
+| Automation | quitting apps, Notes, Messages, Spotify, Chrome | macOS asks the first time each is used |
 
-Restart `heymac` after you grant Accessibility.
+Restart the app after you grant Accessibility.
+
+### Updating and restarting
+
+Changes to `~/.config/heymac/config.toml` apply on their own within a couple of seconds (except the hotkey, wake
+word, microphone and UI style). After changing the code, restart:
+
+```bash
+pkill -f heymac; sleep 2; open ~/Applications/"Hey Mac.app"
+```
 
 ### Test without the mic
 
 ```bash
 heymac --text "quit chrome"
 heymac --text "find my resume"
-heymac --text "open a new cursor window with my portfolio folder"
-python -m pytest tests          # unit tests, no Mac needed
+heymac --list-mics
+python -m pytest                # unit tests, no Mac needed
 ```
 
 ## Things to say
@@ -88,9 +120,9 @@ python -m pytest tests          # unit tests, no Mac needed
 | search the web for best ramen near me | Google in the browser | yes |
 | ask Claude how to reverse a linked list | opens Claude in Chrome and sends it | no |
 | open Gemini and ask it … / search … on Perplexity | same for Gemini, ChatGPT, Perplexity | no |
-| ask ChatGPT to summarize my cs373 hw2 instructions | finds the file, sends its text along | yes |
+| ask ChatGPT to summarize my cs101 hw2 instructions | finds the file, sends its text along | yes |
 | text me a note: buy milk / send me this page / send me what I copied | iMessage to yourself | no |
-| send my cs373 hw2 instructions to my phone | finds the file, texts it to you | yes |
+| send my cs101 hw2 instructions to my phone | finds the file, texts it to you | yes |
 | airdrop this page to my phone | opens the AirDrop picker | no |
 | take a note: call the dentist tomorrow | new note in Apple Notes | no |
 | add eggs to my grocery list | adds a line to that note (makes it if needed) | no |
@@ -109,6 +141,8 @@ Presets live in `~/.config/heymac/config.toml` under `[presets.<name>]`; see `co
 Lily palettes: `lily`, `coffee`, `matcha`, `ocean`, `sakura`, `midnight`, `sunset`, or your own three hex colors.
 
 ### Mascots
+
+![All seven mascots in different moods](docs/mascot-states.png)
 
 Instead of the lily, a little animal drawn in code sits in the corner: **cat, bunny, frog, bear, fox, otter or owl**.
 It blinks and breathes while idle, perks its ears and moves its mouth with your voice, tilts its head while
@@ -142,9 +176,40 @@ The built-in wake words are `hey_jarvis`, `alexa` and `hey_mycroft`. For a custo
 
 Simple commands never call the AI. An AI command costs about 2–4k tokens with Haiku 4.5 ($1/M input, $5/M output), roughly **$0.003–0.01 each**. 20 a day comes to about $2–5 a month.
 
+## Third-party models and licenses
+
+hey-mac's own code is MIT-licensed. It downloads these when you set it up:
+
+- **Whisper large-v3-turbo** (OpenAI, MIT), via [mlx-whisper](https://github.com/ml-explore/mlx-examples).
+- **[openWakeWord](https://github.com/dscripka/openWakeWord)** (code Apache 2.0). Its pre-trained wake word models,
+  including "hey jarvis", are licensed **[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)**,
+  which means non-commercial use only. They aren't included in this repo. If you build something commercial on
+  hey-mac, train your own wake word (see above) or turn the wake word off and use the hotkey.
+
+hey-mac isn't affiliated with Apple, Anthropic, OpenAI, Google, Perplexity or Spotify.
+
+## Uninstall
+
+```bash
+pkill -f heymac
+rm -rf ~/Applications/"Hey Mac.app" ~/.config/heymac ~/Library/Logs/heymac.log
+rm -rf /path/to/hey-mac          # the cloned folder
+```
+
+The Whisper model is cached in `~/.cache/huggingface`; delete it there if you want the space back.
+
 ## Ideas for later
 
-- A launchd agent so it starts at login
-- Package as a `.app` with `py2app` so permissions attach to the app instead of Terminal
-- More tools: calendar, reminders, Messages ("text mom I'm late"), window tiling
+- Calendar and Reminders
+- Window tiling ("put Cursor on the left and Chrome on the right")
 - Streaming transcription so text appears while you talk
+- A signed, notarized download so you don't need Python
+
+## Contributing
+
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and how to add a voice
+command or a new mascot. Please report security problems privately ([SECURITY.md](SECURITY.md)).
+
+## License
+
+[MIT](LICENSE) © 2026 Christine Xu
